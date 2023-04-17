@@ -11,6 +11,11 @@ int main(void) {
 
 #include <ctest.h>
 
-int main(void) { return 0; }
+#include "lexer_test.h"
+
+int main(void) {
+	TESTS(test_lexer_h);
+	return ct_summarize_tests();
+}
 
 #endif
