@@ -6,11 +6,9 @@
 #include <ctest.h>
 #include <string.h>
 
-char *source_text = "hello world!";
-
 struct scanner test_scanner(void) {
 	struct scanner s;
-	s.source = "hello world!";
+	s.source = "hello\nworld!";
 	s.source_len = strlen(s.source);
 	s.lexeme_start = 0;
 	s.current = 0;
@@ -37,6 +35,25 @@ test advance_increments_current(void) {
 	struct scanner s = test_scanner();
 	advance(&s);
 	EXPECT(s.current == 1);
+	PASS();
+}
+
+test advance_increments_line_and_resets_column_on_newline(void) {
+	struct scanner s = test_scanner();
+	char c;
+	c = advance(&s);
+	EXPECT(c != '\n');
+	EXPECT(s.line == 0);
+	EXPECT(s.column == 1);
+	c = advance(&s);
+	EXPECT(c != '\n');
+	EXPECT(s.line == 0);
+	EXPECT(s.column == 2);
+	s.current = 5;
+	c = advance(&s);
+	EXPECT(c == '\n');
+	EXPECT(s.line == 1);
+	EXPECT(s.column == 0);
 	PASS();
 }
 
@@ -105,6 +122,7 @@ void test_lexer_h(void) {
 	TEST(get_ch_returns_correct_character);
 	TEST(get_ch_returns_null_byte_when_out_of_bounds);
 	TEST(advance_increments_current);
+	TEST(advance_increments_line_and_resets_column_on_newline);
 	TEST(peek_returns_correct_character);
 	TEST(peek_next_returns_correct_character);
 	TEST(match_only_matches_the_correct_character);

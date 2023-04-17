@@ -9,6 +9,12 @@ char get_ch(struct scanner *s, size_t i) {
 
 char advance(struct scanner *s) {
 	char c = get_ch(s, s->current);
+	if (c == '\n') {
+		s->line++;
+		s->column = 0;
+	} else {
+		s->column++;
+	}
 	s->current++;
 	return c;
 }
