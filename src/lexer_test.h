@@ -111,4 +111,5 @@ void test_lexer_h(void) {
 	TEST(match_advances_when_character_matches);
 	TEST(match_does_not_match_out_of_bounds);
 }
+
 #endif
