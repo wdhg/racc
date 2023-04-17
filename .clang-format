@@ -2,7 +2,7 @@
 BasedOnStyle: LLVM
 IndentWidth: 2
 TabWidth: 2
-UseTab: Always
+UseTab: AlignWithSpaces
 AlignAfterOpenBracket: BlockIndent
 SeparateDefinitionBlocks: Always
 ...
