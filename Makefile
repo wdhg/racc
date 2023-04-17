@@ -14,7 +14,7 @@ C_FLAGS += -I$(DIR_LIB)/carena/include
 MAIN_SRC = $(DIR_SRC)/main.c
 
 SOURCES = $(filter-out $(MAIN_SRC),$(wildcard $(DIR_SRC)/*.c))
-OBJECTS = $(subst $(DIR_SRC),$(DIR_OBJ),$(patsubst %.c,%.o,$(SRC)))
+OBJECTS = $(subst $(DIR_SRC),$(DIR_OBJ),$(patsubst %.c,%.o,$(SOURCES)))
 TESTS   = $(wildcard $(DIR_SRC)/*_test.h)
 HEADERS = $(filter-out $(TESTS),$(wildcard $(DIR_SRC)/*.h))
 
@@ -33,11 +33,11 @@ $(EXE_MAIN): $(OBJECTS) $(MAIN_SRC) $(HEADERS)
 
 $(EXE_DEBUG): $(OBJECTS) $(MAIN_SRC) $(HEADERS)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(OBJ) $(MAIN_SRC) $(C_FLAGS) -g
+	$(CC) -o $@ $(OBJECTS) $(MAIN_SRC) $(C_FLAGS) -g
 
 $(EXE_TEST): $(OBJECTS) $(MAIN_SRC) $(HEADERS) $(TESTS)
 	mkdir -p $(dir $@)
-	$(CC) -D RACC_TEST -o $@ $(OBJ) $(MAIN_SRC) $(C_FLAGS) -g
+	$(CC) -D RACC_TEST -o $@ $(OBJECTS) $(MAIN_SRC) $(C_FLAGS) -g
 
 $(DIR_OBJ)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
