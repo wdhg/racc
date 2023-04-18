@@ -1,9 +1,6 @@
 [submodule "lib/ctest"]
 	path = lib/ctest
 	url = git@github.com:wdhg/ctest.git
-[submodule "lib/carena"]
-	path = lib/carena
-	url = git@github.com:wdhg/carena.git
 [submodule "lib/arena"]
 	path = lib/arena
 	url = git@github.com:wdhg/arena.git
