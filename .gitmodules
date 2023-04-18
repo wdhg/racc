@@ -4,3 +4,6 @@
 [submodule "lib/carena"]
 	path = lib/carena
 	url = git@github.com:wdhg/carena.git
+[submodule "lib/arena"]
+	path = lib/arena
+	url = git@github.com:wdhg/arena.git
