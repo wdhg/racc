@@ -1,8 +1,12 @@
 ---
 BasedOnStyle: LLVM
-IndentWidth: 2
 TabWidth: 2
+IndentWidth: 2
+ContinuationIndentWidth: 2
 UseTab: AlignWithSpaces
+AlignConsecutiveAssignments: AcrossComments
+AlignConsecutiveBitFields: AcrossComments
+AlignConsecutiveMacros: AcrossComments
 AlignAfterOpenBracket: BlockIndent
 SeparateDefinitionBlocks: Always
 ...
