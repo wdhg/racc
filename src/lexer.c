@@ -83,6 +83,42 @@ static struct token scan_add(struct scanner *s, struct arena *arena) {
 	return token;
 }
 
+static struct token scan_sub(struct scanner *s, struct arena *arena) {
+	struct token token;
+	token.type   = TOK_SUB;
+	token.line   = s->line;
+	token.column = s->column;
+	assert(match(s, '-'));
+	token.lexeme_len = 1;
+	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
+	token.lexeme[0]  = s->source[0];
+	return token;
+}
+
+static struct token scan_mul(struct scanner *s, struct arena *arena) {
+	struct token token;
+	token.type   = TOK_MUL;
+	token.line   = s->line;
+	token.column = s->column;
+	assert(match(s, '*'));
+	token.lexeme_len = 1;
+	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
+	token.lexeme[0]  = s->source[0];
+	return token;
+}
+
+static struct token scan_div(struct scanner *s, struct arena *arena) {
+	struct token token;
+	token.type   = TOK_DIV;
+	token.line   = s->line;
+	token.column = s->column;
+	assert(match(s, '/'));
+	token.lexeme_len = 1;
+	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
+	token.lexeme[0]  = s->source[0];
+	return token;
+}
+
 struct token scan_token(struct scanner *s, struct arena *arena) {
 	s->lexeme_start = s->current;
 
@@ -94,10 +130,14 @@ struct token scan_token(struct scanner *s, struct arena *arena) {
 		case '*':
 			return scan_comment_multi(s, arena);
 		default:
-			assert(0);
+			return scan_div(s, arena);
 		}
 	case '+':
 		return scan_add(s, arena);
+	case '-':
+		return scan_sub(s, arena);
+	case '*':
+		return scan_mul(s, arena);
 	default:
 		assert(0);
 	}
