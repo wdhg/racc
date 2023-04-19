@@ -14,15 +14,25 @@ C_FLAGS  = -Wall -Wextra -pedantic -std=c89
 C_FLAGS += -I$(DIR_LIB)/ctest/include
 C_FLAGS += -I$(DIR_LIB)/arena/include
 
-SOURCES       = $(wildcard $(DIR_SRC)/*.c)
-HEADERS       = $(wildcard $(DIR_SRC)/*.h)
-OBJECTS       = $(patsubst %.c,%.o,$(SOURCES))
-OBJECTS_MAIN  = $(subst $(DIR_SRC),$(DIR_OBJ_MAIN),$(OBJECTS))
-OBJECTS_DEBUG = $(subst $(DIR_SRC),$(DIR_OBJ_DEBUG),$(OBJECTS))
-OBJECTS_TEST  = $(subst $(DIR_SRC),$(DIR_OBJ_TEST),$(OBJECTS))
+MAIN_C = $(DIR_SRC)/main.c
+TEST_C = $(DIR_SRC)/test.c
 
-OBJECTS_LIBS_MAIN   = $(DIR_LIB)/arena/obj/lib/arena.o
-OBJECTS_LIBS_MAIN  += $(DIR_LIB)/ctest/obj/lib/ctest.o
+TEST   = $(wildcard $(DIR_SRC)/*_test.h)
+HEADERS = $(filter-out $(TEST),$(wildcard $(DIR_SRC)/*.h))
+
+SOURCES_ALL   = $(wildcard $(DIR_SRC)/*.c)
+SOURCES_MAIN  = $(filter-out $(TEST_C),$(SOURCES_ALL))
+SOURCES_TEST = $(filter-out $(MAIN_C),$(SOURCES_ALL))
+
+OBJECTS_MAIN_TEMP  = $(patsubst %.c,%.o,$(SOURCES_MAIN))
+OBJECTS_TEST_TEMP = $(patsubst %.c,%.o,$(SOURCES_TEST))
+
+OBJECTS_MAIN  = $(subst $(DIR_SRC),$(DIR_OBJ_MAIN),$(OBJECTS_MAIN_TEMP))
+OBJECTS_DEBUG = $(subst $(DIR_SRC),$(DIR_OBJ_DEBUG),$(OBJECTS_MAIN_TEMP))
+OBJECTS_TEST  = $(subst $(DIR_SRC),$(DIR_OBJ_TEST),$(OBJECTS_TEST_TEMP))
+
+OBJECTS_LIBS_MAIN  = $(DIR_LIB)/arena/obj/lib/arena.o
+OBJECTS_LIBS_MAIN += $(DIR_LIB)/ctest/obj/lib/ctest.o
 
 OBJECTS_LIBS_DEBUG  = $(DIR_LIB)/arena/obj/debug/arena.o
 OBJECTS_LIBS_DEBUG += $(DIR_LIB)/ctest/obj/debug/ctest.o
@@ -48,19 +58,19 @@ libs-debug:
 
 $(EXE_MAIN): libs $(OBJECTS_MAIN) $(HEADERS)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(OBJECTS_MAIN) $(OBJECTS_LIBS_MAIN) $(C_FLAGS) -O2
+	$(CC) -o $@ $(OBJECTS_MAIN) $(OBJECTS_LIBS_MAIN) $(C_FLAGS) -O3
 
 $(EXE_DEBUG): libs-debug $(OBJECTS_DEBUG) $(HEADERS)
 	mkdir -p $(dir $@)
 	$(CC) -o $@ $(OBJECTS_DEBUG) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
 
-$(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS)
+$(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS) $(TEST)
 	mkdir -p $(dir $@)
 	$(CC) -D RACC_TEST -o $@ $(OBJECTS_TEST) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
 
 $(DIR_OBJ_MAIN)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
-	$(CC) -c -o $@ $< $(C_FLAGS)
+	$(CC) -c -o $@ $< $(C_FLAGS) -O3
 
 $(DIR_OBJ_DEBUG)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
@@ -68,7 +78,7 @@ $(DIR_OBJ_DEBUG)/%.o: $(DIR_SRC)/%.c
 
 $(DIR_OBJ_TEST)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
-	$(CC) -D RACC_TEST -c -o $@ $< $(C_FLAGS) -g
+	$(CC) -c -o $@ $< $(C_FLAGS) -g
 
 .PHONY: clean
 clean:
