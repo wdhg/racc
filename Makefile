@@ -17,8 +17,8 @@ C_FLAGS += -I$(DIR_LIB)/arena/include
 MAIN_C = $(DIR_SRC)/main.c
 TEST_C = $(DIR_SRC)/test.c
 
-TEST   = $(wildcard $(DIR_SRC)/*_test.h)
-HEADERS = $(filter-out $(TEST),$(wildcard $(DIR_SRC)/*.h))
+TESTS   = $(wildcard $(DIR_SRC)/*_test.h)
+HEADERS = $(filter-out $(TESTS),$(wildcard $(DIR_SRC)/*.h))
 
 SOURCES_ALL   = $(wildcard $(DIR_SRC)/*.c)
 SOURCES_MAIN  = $(filter-out $(TEST_C),$(SOURCES_ALL))
@@ -64,7 +64,7 @@ $(EXE_DEBUG): libs-debug $(OBJECTS_DEBUG) $(HEADERS)
 	mkdir -p $(dir $@)
 	$(CC) -o $@ $(OBJECTS_DEBUG) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
 
-$(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS) $(TEST)
+$(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS) $(TESTS)
 	mkdir -p $(dir $@)
 	$(CC) -D RACC_TEST -o $@ $(OBJECTS_TEST) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
 
