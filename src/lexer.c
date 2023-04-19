@@ -45,6 +45,8 @@ scan_comment_single(struct scanner *s, struct arena *arena) {
 	token.type   = TOK_COMMENT_SINGLE;
 	token.line   = s->line;
 	token.column = s->column;
+	assert(match(s, '/'));
+	assert(match(s, '/'));
 	while (peek(s) != '\n') {
 		advance(s);
 	}
@@ -59,11 +61,25 @@ static struct token scan_comment_multi(struct scanner *s, struct arena *arena) {
 	token.type   = TOK_COMMENT_MULTI;
 	token.line   = s->line;
 	token.column = s->column;
+	assert(match(s, '/'));
+	assert(match(s, '*'));
 	while (!(advance(s) == '*' && advance(s) == '/')) {
 	}
 	token.lexeme_len = 1 + s->current - s->lexeme_start;
 	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
 	strlcpy(token.lexeme, &s->source[s->lexeme_start], token.lexeme_len);
+	return token;
+}
+
+static struct token scan_add(struct scanner *s, struct arena *arena) {
+	struct token token;
+	token.type   = TOK_ADD;
+	token.line   = s->line;
+	token.column = s->column;
+	assert(match(s, '+'));
+	token.lexeme_len = 1;
+	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
+	token.lexeme[0]  = s->source[0];
 	return token;
 }
 
@@ -80,6 +96,8 @@ struct token scan_token(struct scanner *s, struct arena *arena) {
 		default:
 			assert(0);
 		}
+	case '+':
+		return scan_add(s, arena);
 	default:
 		assert(0);
 	}

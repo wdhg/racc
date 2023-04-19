@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "token.h"
 
 #include <ctest.h>
 
@@ -35,7 +36,19 @@ test scan_token_scans_multi_line_comments(void) {
 	PASS();
 }
 
+test scan_token_scans_add_symbols(void) {
+	struct scanner s    = test_scanner("+\n");
+	struct arena *arena = arena_alloc();
+	struct token token  = scan_token(&s, arena);
+	EXPECT(token.type == TOK_ADD);
+	EXPECT(token.lexeme_len = 1);
+	EXPECT(strcmp(token.lexeme, "+") == 0);
+	EXPECT(s.current == 1);
+	PASS();
+}
+
 void test_lexer_h(void) {
 	TEST(scan_token_scans_single_line_comments);
 	TEST(scan_token_scans_multi_line_comments);
+	TEST(scan_token_scans_add_symbols);
 }
