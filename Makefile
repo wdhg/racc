@@ -76,7 +76,7 @@ $(DIR_OBJ_DEBUG)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(C_FLAGS) -g
 
-$(DIR_OBJ_TEST)/%.o: $(DIR_SRC)/%.c
+$(DIR_OBJ_TEST)/%.o: $(DIR_SRC)/%.c $(TESTS)
 	mkdir -p $(dir $@)
 	$(CC) -c -o $@ $< $(C_FLAGS) -g
 
