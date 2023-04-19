@@ -58,15 +58,15 @@ libs-debug:
 
 $(EXE_MAIN): libs $(OBJECTS_MAIN) $(HEADERS)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(OBJECTS_MAIN) $(OBJECTS_LIBS_MAIN) $(C_FLAGS) -O3
+	$(CC) $(C_FLAGS) -O3 -o $@ $(OBJECTS_MAIN) $(OBJECTS_LIBS_MAIN)
 
 $(EXE_DEBUG): libs-debug $(OBJECTS_DEBUG) $(HEADERS)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(OBJECTS_DEBUG) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
+	$(CC) $(C_FLAGS) -g -o $@ $(OBJECTS_DEBUG) $(OBJECTS_LIBS_DEBUG)
 
-$(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS) $(TESTS)
+$(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS)
 	mkdir -p $(dir $@)
-	$(CC) -o $@ $(OBJECTS_TEST) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
+	$(CC) $(C_FLAGS) -g -o $@ $(OBJECTS_TEST) $(OBJECTS_LIBS_DEBUG)
 
 $(DIR_OBJ_MAIN)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
