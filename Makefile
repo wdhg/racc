@@ -66,7 +66,7 @@ $(EXE_DEBUG): libs-debug $(OBJECTS_DEBUG) $(HEADERS)
 
 $(EXE_TEST): libs-debug $(OBJECTS_TEST) $(HEADERS) $(TESTS)
 	mkdir -p $(dir $@)
-	$(CC) -D RACC_TEST -o $@ $(OBJECTS_TEST) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
+	$(CC) -o $@ $(OBJECTS_TEST) $(OBJECTS_LIBS_DEBUG) $(C_FLAGS) -g
 
 $(DIR_OBJ_MAIN)/%.o: $(DIR_SRC)/%.c
 	mkdir -p $(dir $@)
