@@ -124,6 +124,87 @@ test scan_token_scans_keyword_where(void) {
 	SCAN_TOKEN_HELPER(TOK_WHERE, "where");
 }
 
+test scan_token_scans_a_sequence_of_tokens(void) {
+	struct token token;
+	char *source        = "let x = 300 in y*x ==600";
+	struct scanner s    = test_scanner(source);
+	struct arena *arena = arena_alloc();
+
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_LET);
+	EXPECT(token.lexeme_len == 3);
+	EXPECT(strcmp(token.lexeme, "let") == 0);
+	EXPECT(s.current == 3);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_SPACE);
+	EXPECT(s.current == 4);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_IDENTIFIER);
+	EXPECT(token.lexeme_len == 1);
+	EXPECT(strcmp(token.lexeme, "x") == 0);
+	EXPECT(s.current == 5);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_SPACE);
+	EXPECT(s.current == 6);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_EQ);
+	EXPECT(token.lexeme_len == 1);
+	EXPECT(strcmp(token.lexeme, "=") == 0);
+	EXPECT(s.current == 7);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_SPACE);
+	EXPECT(s.current == 8);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_INT);
+	EXPECT(token.lexeme_len == 3);
+	EXPECT(strcmp(token.lexeme, "300") == 0);
+	EXPECT(s.current == 11);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_SPACE);
+	EXPECT(s.current == 12);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_IN);
+	EXPECT(token.lexeme_len == 2);
+	EXPECT(strcmp(token.lexeme, "in") == 0);
+	EXPECT(s.current == 14);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_SPACE);
+	EXPECT(s.current == 15);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_IDENTIFIER);
+	EXPECT(token.lexeme_len == 1);
+	EXPECT(strcmp(token.lexeme, "y") == 0);
+	EXPECT(s.current == 16);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_MUL);
+	EXPECT(token.lexeme_len == 1);
+	EXPECT(strcmp(token.lexeme, "*") == 0);
+	EXPECT(s.current == 17);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_IDENTIFIER);
+	EXPECT(token.lexeme_len == 1);
+	EXPECT(strcmp(token.lexeme, "x") == 0);
+	EXPECT(s.current == 18);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_SPACE);
+	EXPECT(s.current == 19);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_EQ_EQ);
+	EXPECT(token.lexeme_len == 2);
+	EXPECT(strcmp(token.lexeme, "==") == 0);
+	EXPECT(s.current == 21);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_INT);
+	EXPECT(token.lexeme_len == 3);
+	EXPECT(strcmp(token.lexeme, "600") == 0);
+	EXPECT(s.current == 24);
+	token = scan_token(&s, arena);
+	EXPECT(token.type == TOK_EOF);
+
+	arena_free(arena);
+	PASS();
+}
+
 void test_lexer_h(void) {
 	TEST(scan_token_scans_eof);
 	TEST(scan_token_scans_single_line_comments);
@@ -152,4 +233,5 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_keyword_let);
 	TEST(scan_token_scans_keyword_in);
 	TEST(scan_token_scans_keyword_where);
+	TEST(scan_token_scans_a_sequence_of_tokens);
 }
