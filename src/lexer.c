@@ -113,9 +113,9 @@ scan_lt(struct token *token, struct scanner *s, struct arena *arena) {
 
 struct token scan_token(struct scanner *s, struct arena *arena) {
 	struct token token;
-	s->lexeme_start = s->current;
 	token.line      = s->line;
 	token.column    = s->column;
+	s->lexeme_start = s->current;
 
 	switch (peek(s)) {
 	case '/':
