@@ -39,106 +39,116 @@ static int match(struct scanner *s, char c) {
 
 /* ========== LEXER ========== */
 
-static struct token
-scan_comment_single(struct scanner *s, struct arena *arena) {
-	struct token token;
-	token.type   = TOK_COMMENT_SINGLE;
-	token.line   = s->line;
-	token.column = s->column;
+static void scan_comment_single(
+	struct token *token, struct scanner *s, struct arena *arena
+) {
+	token->type = TOK_COMMENT_SINGLE;
 	assert(match(s, '/'));
 	assert(match(s, '/'));
 	while (peek(s) != '\n') {
 		advance(s);
 	}
-	token.lexeme_len = 1 + s->current - s->lexeme_start;
-	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
-	strlcpy(token.lexeme, &s->source[s->lexeme_start], token.lexeme_len);
-	return token;
+	token->lexeme_len = 1 + s->current - s->lexeme_start;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	strlcpy(token->lexeme, &s->source[s->lexeme_start], token->lexeme_len);
 }
 
-static struct token scan_comment_multi(struct scanner *s, struct arena *arena) {
-	struct token token;
-	token.type   = TOK_COMMENT_MULTI;
-	token.line   = s->line;
-	token.column = s->column;
+static void scan_comment_multi(
+	struct token *token, struct scanner *s, struct arena *arena
+) {
+	token->type = TOK_COMMENT_MULTI;
 	assert(match(s, '/'));
 	assert(match(s, '*'));
 	while (!(advance(s) == '*' && advance(s) == '/')) {
 	}
-	token.lexeme_len = 1 + s->current - s->lexeme_start;
-	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
-	strlcpy(token.lexeme, &s->source[s->lexeme_start], token.lexeme_len);
-	return token;
+	token->lexeme_len = 1 + s->current - s->lexeme_start;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	strlcpy(token->lexeme, &s->source[s->lexeme_start], token->lexeme_len);
 }
 
-static struct token scan_add(struct scanner *s, struct arena *arena) {
-	struct token token;
-	token.type   = TOK_ADD;
-	token.line   = s->line;
-	token.column = s->column;
+static void
+scan_add(struct token *token, struct scanner *s, struct arena *arena) {
+	token->type = TOK_ADD;
 	assert(match(s, '+'));
-	token.lexeme_len = 1;
-	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
-	token.lexeme[0]  = s->source[0];
-	return token;
+	token->lexeme_len = 1;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	token->lexeme[0]  = s->source[0];
 }
 
-static struct token scan_sub(struct scanner *s, struct arena *arena) {
-	struct token token;
-	token.type   = TOK_SUB;
-	token.line   = s->line;
-	token.column = s->column;
+static void
+scan_sub(struct token *token, struct scanner *s, struct arena *arena) {
+	token->type = TOK_SUB;
 	assert(match(s, '-'));
-	token.lexeme_len = 1;
-	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
-	token.lexeme[0]  = s->source[0];
-	return token;
+	token->lexeme_len = 1;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	token->lexeme[0]  = s->source[0];
 }
 
-static struct token scan_mul(struct scanner *s, struct arena *arena) {
-	struct token token;
-	token.type   = TOK_MUL;
-	token.line   = s->line;
-	token.column = s->column;
+static void
+scan_mul(struct token *token, struct scanner *s, struct arena *arena) {
+	token->type = TOK_MUL;
 	assert(match(s, '*'));
-	token.lexeme_len = 1;
-	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
-	token.lexeme[0]  = s->source[0];
-	return token;
+	token->lexeme_len = 1;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	token->lexeme[0]  = s->source[0];
 }
 
-static struct token scan_div(struct scanner *s, struct arena *arena) {
-	struct token token;
-	token.type   = TOK_DIV;
-	token.line   = s->line;
-	token.column = s->column;
+static void
+scan_div(struct token *token, struct scanner *s, struct arena *arena) {
+	token->type = TOK_DIV;
 	assert(match(s, '/'));
-	token.lexeme_len = 1;
-	token.lexeme     = arena_push_array(arena, token.lexeme_len, char);
-	token.lexeme[0]  = s->source[0];
-	return token;
+	token->lexeme_len = 1;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	token->lexeme[0]  = s->source[0];
+}
+
+static void
+scan_lt(struct token *token, struct scanner *s, struct arena *arena) {
+	token->type = TOK_LT;
+	assert(match(s, '<'));
+	token->lexeme_len = 1;
+	token->lexeme     = arena_push_array(arena, token->lexeme_len, char);
+	token->lexeme[0]  = s->source[0];
 }
 
 struct token scan_token(struct scanner *s, struct arena *arena) {
+	struct token token;
 	s->lexeme_start = s->current;
+	token.line      = s->line;
+	token.column    = s->column;
 
 	switch (peek(s)) {
 	case '/':
 		switch (peek_next(s)) {
 		case '/':
-			return scan_comment_single(s, arena);
+			scan_comment_single(&token, s, arena);
+			break;
 		case '*':
-			return scan_comment_multi(s, arena);
+			scan_comment_multi(&token, s, arena);
+			break;
 		default:
-			return scan_div(s, arena);
+			scan_div(&token, s, arena);
+			break;
 		}
+		break;
 	case '+':
-		return scan_add(s, arena);
+		scan_add(&token, s, arena);
+		break;
 	case '-':
-		return scan_sub(s, arena);
+		scan_sub(&token, s, arena);
+		break;
 	case '*':
-		return scan_mul(s, arena);
+		scan_mul(&token, s, arena);
+		break;
+	case '<':
+		switch (peek_next(s)) {
+		default:
+			scan_lt(&token, s, arena);
+			break;
+		}
 	default:
-		assert(0);
+		token.type = TOK_NONE;
 	}
+
+	return token;
 }
