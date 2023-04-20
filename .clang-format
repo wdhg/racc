@@ -9,4 +9,5 @@ AlignConsecutiveBitFields: AcrossComments
 AlignConsecutiveMacros: AcrossComments
 AlignAfterOpenBracket: BlockIndent
 SeparateDefinitionBlocks: Always
+AllowShortCaseLabelsOnASingleLine: true
 ...
