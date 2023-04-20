@@ -7,8 +7,19 @@ enum token_type {
 	/* misc */
 	TOK_NONE,
 	TOK_EOF,
+	TOK_SPACE,
 	TOK_COMMENT_SINGLE,
 	TOK_COMMENT_MULTI,
+	TOK_IDENTIFIER,
+	/* literals */
+	TOK_INT,
+	TOK_DOUBLE,
+	TOK_STRING,
+	TOK_CHAR,
+	TOK_BOOL,
+	/* assignment */
+	TOK_EQ,
+	TOK_COLON,
 	/* arithmetic */
 	TOK_ADD,
 	TOK_SUB,
@@ -21,6 +32,7 @@ enum token_type {
 	TOK_GT_EQ,
 	TOK_EQ_EQ,
 	TOK_NE,
+	/* type */
 	TOK_COLON_COLON,
 	TOK_ARROW,
 	/* function */

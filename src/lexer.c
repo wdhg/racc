@@ -1,6 +1,7 @@
 #include "lexer.h"
 
 #include "token.h"
+#include <_ctype.h>
 #include <arena.h>
 #include <assert.h>
 
@@ -48,40 +49,132 @@ scan_token_with_slash_prefix(struct token *token, struct scanner *s) {
 		advance(s);
 		while (!is_at_end(s) && peek(s) != '\n') {
 			advance(s);
+			if (is_at_end(s)) {
+				/* TODO error */
+			}
 		}
 		token->type = TOK_COMMENT_SINGLE;
 		break;
 	case '*':
 		advance(s);
 		while (!is_at_end(s) && !(advance(s) == '*' && advance(s) == '/')) {
+			if (is_at_end(s)) {
+				/* TODO error */
+			}
 		}
 		token->type = TOK_COMMENT_MULTI;
 		break;
+	case '=': advance(s); token->type = TOK_NE;
 	default: token->type = TOK_DIV; break;
 	}
 }
 
+static void scan_token_string(struct token *token, struct scanner *s) {
+	while (!is_at_end(s) && advance(s) != '"') {
+		if (is_at_end(s)) {
+			/* TODO error */
+		}
+	}
+	token->type = TOK_STRING;
+}
+
+static void scan_token_char(struct token *token, struct scanner *s) {
+	if (peek(s) == '\\') {
+		/* escaped character */
+		advance(s);
+	}
+	advance(s);
+	if (!match(s, '\'')) {
+		/* TODO error */
+	}
+	token->type = TOK_CHAR;
+}
+
+static void scan_token_number(struct token *token, struct scanner *s) {
+	int is_double = 0;
+	while (isnumber(peek(s))) {
+		advance(s);
+	}
+	is_double = match(s, '.');
+	if (is_double) {
+		if (!isnumber(peek(s))) {
+			/* TODO error */
+		}
+		while (isnumber(peek(s))) {
+			advance(s);
+		}
+	}
+	token->type = is_double ? TOK_DOUBLE : TOK_INT;
+}
+
+static void scan_token_identifier(struct token *token, struct scanner *s) {
+	while (isalpha(peek(s))) {
+		advance(s);
+	}
+	token->type = TOK_IDENTIFIER;
+}
+
 struct token scan_token(struct scanner *s, struct arena *arena) {
+	char c;
 	struct token token;
+	token.lexeme    = NULL;
 	token.line      = s->line;
 	token.column    = s->column;
 	s->lexeme_start = s->current;
 
-	switch (advance(s)) {
+	c = advance(s);
+
+	switch (c) {
+	case '\0': token.type = TOK_EOF; break;
 	case '/': scan_token_with_slash_prefix(&token, s); break;
+	case '"': scan_token_string(&token, s); break;
+	case '\'': scan_token_char(&token, s); break;
 	case '+': token.type = TOK_ADD; break;
-	case '-': token.type = TOK_SUB; break;
+	case '-': token.type = match(s, '>') ? TOK_ARROW : TOK_SUB; break;
 	case '*': token.type = TOK_MUL; break;
 	case '<': token.type = match(s, '=') ? TOK_LT_EQ : TOK_LT; break;
 	case '>': token.type = match(s, '=') ? TOK_GT_EQ : TOK_GT; break;
-	default: token.type = TOK_NONE;
+	case '=': token.type = match(s, '=') ? TOK_EQ_EQ : TOK_EQ; break;
+	case ':': token.type = match(s, ':') ? TOK_COLON_COLON : TOK_COLON; break;
+	case '|': token.type = TOK_PIPE; break;
+	case '\\': token.type = TOK_LAMBDA; break;
+	case ' ':
+	case '\t':
+	case '\r':
+	case '\n': token.type = TOK_SPACE; break;
+	default:
+		if (isnumber(c)) {
+			scan_token_number(&token, s);
+		} else if (isalpha(c)) {
+			scan_token_identifier(&token, s);
+		} else {
+			token.type = TOK_NONE;
+		}
 	}
 
-	if (token.type != TOK_NONE) {
+	if (token.type != TOK_NONE && token.type != TOK_EOF && token.type != TOK_SPACE) {
 		token.lexeme_len = s->current - s->lexeme_start;
 		token.lexeme     = arena_push_array(arena, token.lexeme_len + 1, char);
 		memcpy(token.lexeme, &s->source[s->lexeme_start], token.lexeme_len);
 		token.lexeme[token.lexeme_len] = '\0'; /* null terminate */
+	}
+
+	if (token.type == TOK_IDENTIFIER) {
+		if (strcmp(token.lexeme, "if") == 0) {
+			token.type = TOK_IF;
+		} else if (strcmp(token.lexeme, "data") == 0) {
+			token.type = TOK_DATA;
+		} else if (strcmp(token.lexeme, "let") == 0) {
+			token.type = TOK_LET;
+		} else if (strcmp(token.lexeme, "in") == 0) {
+			token.type = TOK_IN;
+		} else if (strcmp(token.lexeme, "where") == 0) {
+			token.type = TOK_WHERE;
+		} else if (strcmp(token.lexeme, "true") == 0) {
+			token.type = TOK_BOOL;
+		} else if (strcmp(token.lexeme, "false") == 0) {
+			token.type = TOK_BOOL;
+		}
 	}
 
 	return token;
