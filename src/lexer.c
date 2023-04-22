@@ -30,8 +30,6 @@ static char advance(struct scanner *s) {
 
 static char peek(struct scanner *s) { return get_ch(s, s->current); }
 
-static char peek_next(struct scanner *s) { return get_ch(s, s->current + 1); }
-
 static int match(struct scanner *s, char c) {
 	if (s->current >= s->source_len || peek(s) != c) {
 		return 0;
