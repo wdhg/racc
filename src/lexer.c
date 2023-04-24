@@ -127,6 +127,8 @@ struct token scan_token(struct scanner *s, struct arena *arena) {
 	case '/': scan_token_with_slash_prefix(&token, s); break;
 	case '"': scan_token_string(&token, s); break;
 	case '\'': scan_token_char(&token, s); break;
+	case '(': token.type = TOK_PAREN_L; break;
+	case ')': token.type = TOK_PAREN_R; break;
 	case '+': token.type = TOK_ADD; break;
 	case '-': token.type = match(s, '>') ? TOK_ARROW : TOK_SUB; break;
 	case '*': token.type = TOK_MUL; break;

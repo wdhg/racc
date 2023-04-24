@@ -74,6 +74,14 @@ test scan_token_scans_true(void) { SCAN_TOKEN_HELPER(TOK_BOOL, "true"); }
 
 test scan_token_scans_false(void) { SCAN_TOKEN_HELPER(TOK_BOOL, "false"); }
 
+test scan_token_scans_left_parenthesis(void) {
+	SCAN_TOKEN_HELPER(TOK_PAREN_L, "(");
+}
+
+test scan_token_scans_right_parenthesis(void) {
+	SCAN_TOKEN_HELPER(TOK_PAREN_R, ")");
+}
+
 test scan_token_scans_add_symbols(void) { SCAN_TOKEN_HELPER(TOK_ADD, "+"); }
 
 test scan_token_scans_subtract_symbols(void) {
@@ -217,6 +225,8 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_escaped_chars);
 	TEST(scan_token_scans_true);
 	TEST(scan_token_scans_false);
+	TEST(scan_token_scans_left_parenthesis);
+	TEST(scan_token_scans_right_parenthesis);
 	TEST(scan_token_scans_add_symbols);
 	TEST(scan_token_scans_subtract_symbols);
 	TEST(scan_token_scans_multiply_symbols);
