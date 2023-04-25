@@ -18,14 +18,14 @@ struct scanner test_scanner(char *source) {
 	{                                                                            \
 		struct scanner s    = test_scanner(expected_lexeme "\n");                  \
 		struct arena *arena = arena_alloc();                                       \
-		struct token token  = scan_token(&s, arena);                               \
-		EXPECT(token.type == expected_token_type);                                 \
+		struct token *token = scan_token(&s, arena);                               \
+		EXPECT(token->type == expected_token_type);                                \
 		if (expected_lexeme == NULL) {                                             \
-			EXPECT(token.lexeme == NULL);                                            \
+			EXPECT(token->lexeme == NULL);                                           \
 		} else {                                                                   \
 			size_t expected_lexeme_len = strlen(expected_lexeme);                    \
-			EXPECT(token.lexeme_len == expected_lexeme_len);                         \
-			EXPECT(strcmp(token.lexeme, expected_lexeme) == 0);                      \
+			EXPECT(token->lexeme_len == expected_lexeme_len);                        \
+			EXPECT(strcmp(token->lexeme, expected_lexeme) == 0);                     \
 			EXPECT(s.current == expected_lexeme_len);                                \
 		}                                                                          \
 		arena_free(arena);                                                         \
@@ -35,9 +35,9 @@ struct scanner test_scanner(char *source) {
 test scan_token_scans_eof(void) {
 	struct scanner s    = test_scanner("");
 	struct arena *arena = arena_alloc();
-	struct token token  = scan_token(&s, arena);
-	EXPECT(token.type == TOK_EOF);
-	EXPECT(token.lexeme == NULL);
+	struct token *token = scan_token(&s, arena);
+	EXPECT(token->type == TOK_EOF);
+	EXPECT(token->lexeme == NULL);
 	arena_free(arena);
 	PASS();
 }
@@ -133,81 +133,81 @@ test scan_token_scans_keyword_where(void) {
 }
 
 test scan_token_scans_a_sequence_of_tokens(void) {
-	struct token token;
+	struct token *token;
 	char *source        = "let x = 300 in y*x ==600";
 	struct scanner s    = test_scanner(source);
 	struct arena *arena = arena_alloc();
 
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_LET);
-	EXPECT(token.lexeme_len == 3);
-	EXPECT(strcmp(token.lexeme, "let") == 0);
+	EXPECT(token->type == TOK_LET);
+	EXPECT(token->lexeme_len == 3);
+	EXPECT(strcmp(token->lexeme, "let") == 0);
 	EXPECT(s.current == 3);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_SPACE);
+	EXPECT(token->type == TOK_SPACE);
 	EXPECT(s.current == 4);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_IDENTIFIER);
-	EXPECT(token.lexeme_len == 1);
-	EXPECT(strcmp(token.lexeme, "x") == 0);
+	EXPECT(token->type == TOK_IDENTIFIER);
+	EXPECT(token->lexeme_len == 1);
+	EXPECT(strcmp(token->lexeme, "x") == 0);
 	EXPECT(s.current == 5);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_SPACE);
+	EXPECT(token->type == TOK_SPACE);
 	EXPECT(s.current == 6);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_EQ);
-	EXPECT(token.lexeme_len == 1);
-	EXPECT(strcmp(token.lexeme, "=") == 0);
+	EXPECT(token->type == TOK_EQ);
+	EXPECT(token->lexeme_len == 1);
+	EXPECT(strcmp(token->lexeme, "=") == 0);
 	EXPECT(s.current == 7);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_SPACE);
+	EXPECT(token->type == TOK_SPACE);
 	EXPECT(s.current == 8);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_INT);
-	EXPECT(token.lexeme_len == 3);
-	EXPECT(strcmp(token.lexeme, "300") == 0);
+	EXPECT(token->type == TOK_INT);
+	EXPECT(token->lexeme_len == 3);
+	EXPECT(strcmp(token->lexeme, "300") == 0);
 	EXPECT(s.current == 11);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_SPACE);
+	EXPECT(token->type == TOK_SPACE);
 	EXPECT(s.current == 12);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_IN);
-	EXPECT(token.lexeme_len == 2);
-	EXPECT(strcmp(token.lexeme, "in") == 0);
+	EXPECT(token->type == TOK_IN);
+	EXPECT(token->lexeme_len == 2);
+	EXPECT(strcmp(token->lexeme, "in") == 0);
 	EXPECT(s.current == 14);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_SPACE);
+	EXPECT(token->type == TOK_SPACE);
 	EXPECT(s.current == 15);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_IDENTIFIER);
-	EXPECT(token.lexeme_len == 1);
-	EXPECT(strcmp(token.lexeme, "y") == 0);
+	EXPECT(token->type == TOK_IDENTIFIER);
+	EXPECT(token->lexeme_len == 1);
+	EXPECT(strcmp(token->lexeme, "y") == 0);
 	EXPECT(s.current == 16);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_MUL);
-	EXPECT(token.lexeme_len == 1);
-	EXPECT(strcmp(token.lexeme, "*") == 0);
+	EXPECT(token->type == TOK_MUL);
+	EXPECT(token->lexeme_len == 1);
+	EXPECT(strcmp(token->lexeme, "*") == 0);
 	EXPECT(s.current == 17);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_IDENTIFIER);
-	EXPECT(token.lexeme_len == 1);
-	EXPECT(strcmp(token.lexeme, "x") == 0);
+	EXPECT(token->type == TOK_IDENTIFIER);
+	EXPECT(token->lexeme_len == 1);
+	EXPECT(strcmp(token->lexeme, "x") == 0);
 	EXPECT(s.current == 18);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_SPACE);
+	EXPECT(token->type == TOK_SPACE);
 	EXPECT(s.current == 19);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_EQ_EQ);
-	EXPECT(token.lexeme_len == 2);
-	EXPECT(strcmp(token.lexeme, "==") == 0);
+	EXPECT(token->type == TOK_EQ_EQ);
+	EXPECT(token->lexeme_len == 2);
+	EXPECT(strcmp(token->lexeme, "==") == 0);
 	EXPECT(s.current == 21);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_INT);
-	EXPECT(token.lexeme_len == 3);
-	EXPECT(strcmp(token.lexeme, "600") == 0);
+	EXPECT(token->type == TOK_INT);
+	EXPECT(token->lexeme_len == 3);
+	EXPECT(strcmp(token->lexeme, "600") == 0);
 	EXPECT(s.current == 24);
 	token = scan_token(&s, arena);
-	EXPECT(token.type == TOK_EOF);
+	EXPECT(token->type == TOK_EOF);
 
 	arena_free(arena);
 	PASS();

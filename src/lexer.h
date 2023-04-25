@@ -15,6 +15,6 @@ struct scanner {
 	size_t line, column; /* position in source */
 };
 
-struct token scan_token(struct scanner *s, struct arena *arena);
+struct token *scan_token(struct scanner *s, struct arena *arena);
 
 #endif
