@@ -110,6 +110,14 @@ test scan_token_scans_greater_than_or_equal_symbols(void) {
 	SCAN_TOKEN_HELPER(TOK_GT_EQ, ">=");
 }
 
+test scan_token_scans_equal_equal_symbols(void) {
+	SCAN_TOKEN_HELPER(TOK_EQ_EQ, "==");
+}
+
+test scan_token_scans_not_equal_symbols(void) {
+	SCAN_TOKEN_HELPER(TOK_NE, "/=");
+}
+
 test scan_token_scans_colon(void) { SCAN_TOKEN_HELPER(TOK_COLON, ":"); }
 
 test scan_token_scans_colon_colon(void) {
@@ -135,7 +143,6 @@ test scan_token_scans_keyword_where(void) {
 test scan_tokens_scans_a_sequence_of_tokens(void) {
 	struct token **tokens;
 	char *source        = "let x = 300 in y*x ==600";
-	struct scanner s    = test_scanner(source);
 	struct arena *arena = arena_alloc();
 	tokens              = scan_tokens(source, arena);
 
@@ -208,6 +215,8 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_greater_than_symbols);
 	TEST(scan_token_scans_less_than_or_equal_symbols);
 	TEST(scan_token_scans_greater_than_or_equal_symbols);
+	TEST(scan_token_scans_equal_equal_symbols);
+	TEST(scan_token_scans_not_equal_symbols);
 	TEST(scan_token_scans_colon);
 	TEST(scan_token_scans_colon_colon);
 	TEST(scan_token_scans_arrow);

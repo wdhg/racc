@@ -74,7 +74,10 @@ scan_token_with_slash_prefix(struct token *token, struct scanner *s) {
 		}
 		token->type = TOK_COMMENT_MULTI;
 		break;
-	case '=': advance(s); token->type = TOK_NE;
+	case '=':
+		advance(s);
+		token->type = TOK_NE;
+		break;
 	default: token->type = TOK_DIV; break;
 	}
 }
