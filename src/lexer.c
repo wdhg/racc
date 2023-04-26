@@ -1,10 +1,23 @@
 #include "lexer.h"
 
+#include "list.h"
 #include "token.h"
 #include <arena.h>
 #include <assert.h>
+#include <string.h>
 
 /* ========== SCANNER ========== */
+
+static struct scanner new_scanner(char *source) {
+	struct scanner s;
+	s.source       = source;
+	s.source_len   = strlen(source);
+	s.current      = 0;
+	s.lexeme_start = 0;
+	s.line         = 0;
+	s.column       = 0;
+	return s;
+}
 
 static int is_at_end(struct scanner *s) { return s->current >= s->source_len; }
 
@@ -117,9 +130,11 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	token->lexeme       = NULL;
 	token->line         = s->line;
 	token->column       = s->column;
-	s->lexeme_start     = s->current;
 
-	c = advance(s);
+	do {
+		s->lexeme_start = s->current;
+		c               = advance(s);
+	} while (isspace(c));
 
 	switch (c) {
 	case '\0': token->type = TOK_EOF; break;
@@ -137,10 +152,6 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case ':': token->type = match(s, ':') ? TOK_COLON_COLON : TOK_COLON; break;
 	case '|': token->type = TOK_PIPE; break;
 	case '\\': token->type = TOK_LAMBDA; break;
-	case ' ':
-	case '\t':
-	case '\r':
-	case '\n': token->type = TOK_SPACE; break;
 	default:
 		if (isnumber(c)) {
 			scan_token_number(token, s);
@@ -151,7 +162,7 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 		}
 	}
 
-	if (token->type != TOK_NONE && token->type != TOK_EOF && token->type != TOK_SPACE) {
+	if (token->type != TOK_NONE && token->type != TOK_EOF) {
 		token->lexeme_len = s->current - s->lexeme_start;
 		token->lexeme     = arena_push_array(arena, token->lexeme_len + 1, char);
 		memcpy(token->lexeme, &s->source[s->lexeme_start], token->lexeme_len);
@@ -177,4 +188,25 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	}
 
 	return token;
+}
+
+struct token **scan_tokens(char *source, struct arena *arena) {
+	struct token **tokens;
+	struct scanner s       = new_scanner(source);
+	struct list token_list = list_new(arena_alloc());
+
+	while (1) {
+		struct token *token = scan_token(&s, arena);
+		if (token->type != TOK_NONE) {
+			list_append(&token_list, token);
+		}
+		if (token->type == TOK_EOF) {
+			break;
+		}
+	}
+
+	tokens = (struct token **)list_to_array(&token_list, arena);
+	arena_free(token_list.arena);
+
+	return tokens;
 }

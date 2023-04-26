@@ -16,5 +16,6 @@ struct scanner {
 };
 
 struct token *scan_token(struct scanner *s, struct arena *arena);
+struct token **scan_tokens(char *source, struct arena *arena);
 
 #endif
