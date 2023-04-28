@@ -10,4 +10,5 @@ AlignConsecutiveMacros: AcrossComments
 AlignAfterOpenBracket: BlockIndent
 SeparateDefinitionBlocks: Always
 AllowShortCaseLabelsOnASingleLine: true
+ColumnLimit: 80
 ...
