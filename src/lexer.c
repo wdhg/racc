@@ -14,8 +14,6 @@ static struct scanner new_scanner(char *source) {
 	s.source_len   = strlen(source);
 	s.current      = 0;
 	s.lexeme_start = 0;
-	s.line         = 0;
-	s.column       = 0;
 	return s;
 }
 
@@ -30,12 +28,6 @@ static char get_ch(struct scanner *s, size_t i) {
 
 static char advance(struct scanner *s) {
 	char c = get_ch(s, s->current);
-	if (c == '\n') {
-		s->line++;
-		s->column = 0;
-	} else {
-		s->column++;
-	}
 	s->current++;
 	return c;
 }
@@ -131,12 +123,11 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	char c;
 	struct token *token = arena_push_struct(arena, struct token);
 	token->lexeme       = NULL;
-	token->line         = s->line;
-	token->column       = s->column;
 
 	do {
-		s->lexeme_start = s->current;
-		c               = advance(s);
+		s->lexeme_start     = s->current;
+		token->lexeme_index = s->current;
+		c                   = advance(s);
 	} while (isspace(c));
 
 	switch (c) {

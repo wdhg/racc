@@ -9,8 +9,6 @@ struct scanner test_scanner(char *source) {
 	s.source_len   = strlen(source);
 	s.lexeme_start = 0;
 	s.current      = 0;
-	s.line         = 0;
-	s.column       = 0;
 	return s;
 }
 
@@ -142,51 +140,62 @@ test scan_token_scans_keyword_where(void) {
 
 test scan_tokens_scans_a_sequence_of_tokens(void) {
 	struct token **tokens;
-	char *source        = "let x = 300 in y*x ==600";
+	char *source        = "let x = 300 in\ny*x ==600";
 	struct arena *arena = arena_alloc();
 	tokens              = scan_tokens(source, arena);
 
 	EXPECT(tokens[0]->type == TOK_LET);
 	EXPECT(tokens[0]->lexeme_len == 3);
+	EXPECT(tokens[0]->lexeme_index == 0);
 	EXPECT(strcmp(tokens[0]->lexeme, "let") == 0);
 
 	EXPECT(tokens[1]->type == TOK_IDENTIFIER);
 	EXPECT(tokens[1]->lexeme_len == 1);
+	EXPECT(tokens[1]->lexeme_index == 4);
 	EXPECT(strcmp(tokens[1]->lexeme, "x") == 0);
 
 	EXPECT(tokens[2]->type == TOK_EQ);
 	EXPECT(tokens[2]->lexeme_len == 1);
+	EXPECT(tokens[2]->lexeme_index == 6);
 	EXPECT(strcmp(tokens[2]->lexeme, "=") == 0);
 
 	EXPECT(tokens[3]->type == TOK_INT);
 	EXPECT(tokens[3]->lexeme_len == 3);
+	EXPECT(tokens[3]->lexeme_index == 8);
 	EXPECT(strcmp(tokens[3]->lexeme, "300") == 0);
 
 	EXPECT(tokens[4]->type == TOK_IN);
 	EXPECT(tokens[4]->lexeme_len == 2);
+	EXPECT(tokens[4]->lexeme_index == 12);
 	EXPECT(strcmp(tokens[4]->lexeme, "in") == 0);
 
 	EXPECT(tokens[5]->type == TOK_IDENTIFIER);
 	EXPECT(tokens[5]->lexeme_len == 1);
+	EXPECT(tokens[5]->lexeme_index == 15);
 	EXPECT(strcmp(tokens[5]->lexeme, "y") == 0);
 
 	EXPECT(tokens[6]->type == TOK_MUL);
 	EXPECT(tokens[6]->lexeme_len == 1);
+	EXPECT(tokens[6]->lexeme_index == 16);
 	EXPECT(strcmp(tokens[6]->lexeme, "*") == 0);
 
 	EXPECT(tokens[7]->type == TOK_IDENTIFIER);
 	EXPECT(tokens[7]->lexeme_len == 1);
+	EXPECT(tokens[7]->lexeme_index == 17);
 	EXPECT(strcmp(tokens[7]->lexeme, "x") == 0);
 
 	EXPECT(tokens[8]->type == TOK_EQ_EQ);
 	EXPECT(tokens[8]->lexeme_len == 2);
+	EXPECT(tokens[8]->lexeme_index == 19);
 	EXPECT(strcmp(tokens[8]->lexeme, "==") == 0);
 
 	EXPECT(tokens[9]->type == TOK_INT);
 	EXPECT(tokens[9]->lexeme_len == 3);
+	EXPECT(tokens[9]->lexeme_index == 21);
 	EXPECT(strcmp(tokens[9]->lexeme, "600") == 0);
 
 	EXPECT(tokens[10]->type == TOK_EOF);
+	EXPECT(tokens[10]->lexeme_index == 24);
 
 	arena_free(arena);
 

@@ -43,8 +43,7 @@ struct token {
 	enum token_type type;
 	char *lexeme;
 	size_t lexeme_len;
-	size_t line;
-	size_t column;
+	size_t lexeme_index; /* in source */
 };
 
 #endif
