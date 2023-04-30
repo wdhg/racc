@@ -146,6 +146,9 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case ':': token->type = match(s, ':') ? TOK_COLON_COLON : TOK_COLON; break;
 	case '|': token->type = TOK_PIPE; break;
 	case '\\': token->type = TOK_LAMBDA; break;
+	case ';': token->type = TOK_SEMICOLON; break;
+	case '{': token->type = TOK_CURLY_L; break;
+	case '}': token->type = TOK_CURLY_R; break;
 	default:
 		if (isnumber(c)) {
 			scan_token_number(token, s);

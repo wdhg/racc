@@ -138,6 +138,18 @@ test scan_token_scans_keyword_where(void) {
 	SCAN_TOKEN_HELPER(TOK_WHERE, "where");
 }
 
+test scan_token_scans_semicolons(void) {
+	SCAN_TOKEN_HELPER(TOK_SEMICOLON, ";");
+}
+
+test scan_token_scans_left_curly_bracket(void) {
+	SCAN_TOKEN_HELPER(TOK_CURLY_L, "{");
+}
+
+test scan_token_scans_right_curly_bracket(void) {
+	SCAN_TOKEN_HELPER(TOK_CURLY_R, "}");
+}
+
 test scan_tokens_scans_a_sequence_of_tokens(void) {
 	struct token **tokens;
 	char *source        = "let x = 300 in\ny*x ==600";
@@ -234,5 +246,8 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_keyword_let);
 	TEST(scan_token_scans_keyword_in);
 	TEST(scan_token_scans_keyword_where);
+	TEST(scan_token_scans_semicolons);
+	TEST(scan_token_scans_left_curly_bracket);
+	TEST(scan_token_scans_right_curly_bracket);
 	TEST(scan_tokens_scans_a_sequence_of_tokens);
 }
