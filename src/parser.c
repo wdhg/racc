@@ -87,6 +87,13 @@ consume(struct parser *p, enum token_type token_type, char *error_msg) {
 	return result;
 }
 
+static char *copy_lexeme_text(struct parser *p, char *text, size_t len) {
+	char *text_copy = arena_push_array_zero(p->arena, len + 1, char);
+	strncpy(text_copy, text, len);
+	text_copy[len] = '\0'; /* ensure null terminator */
+	return text_copy;
+}
+
 /* ========== EXPRESSIONS ========== */
 
 static int is_primary(enum token_type token_type) {
@@ -107,8 +114,9 @@ static struct expr *parse_primary(struct parser *p) {
 	struct expr *expr   = arena_push_struct_zero(p->arena, struct expr);
 	switch (token->type) {
 	case TOK_IDENTIFIER:
-		expr->type         = EXPR_IDENTIFIER;
-		expr->v.identifier = token->lexeme;
+		expr->type = EXPR_IDENTIFIER;
+		expr->v.identifier =
+			copy_lexeme_text(p, token->lexeme, token->lexeme_len + 1);
 		break;
 	case TOK_INT:
 		expr->type = EXPR_LIT_INT;
@@ -119,11 +127,9 @@ static struct expr *parse_primary(struct parser *p) {
 		sscanf(token->lexeme, "%lf", &expr->v.lit_double);
 		break;
 	case TOK_STRING: {
-		size_t lit_string_len = token->lexeme_len - 1; /* -2 for ", +1 for \0 */
-		expr->type            = EXPR_LIT_STRING;
-		expr->v.lit_string    = arena_push_array(p->arena, lit_string_len, char);
-		strlcpy(expr->v.lit_string, &token->lexeme[1], lit_string_len);
-		expr->v.lit_string[lit_string_len - 1] = '\0'; /* null terminator */
+		expr->type = EXPR_LIT_STRING;
+		expr->v.lit_string =
+			copy_lexeme_text(p, &token->lexeme[1], token->lexeme_len - 2); /* -2 " */
 		break;
 	}
 	case TOK_CHAR:
@@ -304,9 +310,7 @@ static struct type *parse_type_name(struct parser *p) {
 		return NULL;
 	}
 	token_name = previous(p);
-	type->name =
-		arena_push_array_zero(p->arena, token_name->lexeme_len + 1, char);
-	strlcpy(type->name, token_name->lexeme, token_name->lexeme_len + 1);
+	type->name = copy_lexeme_text(p, token_name->lexeme, token_name->lexeme_len);
 	return type;
 }
 
