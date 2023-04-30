@@ -169,8 +169,12 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	if (token->type == TOK_IDENTIFIER) {
 		if (strcmp(token->lexeme, "if") == 0) {
 			token->type = TOK_IF;
+		} else if (strcmp(token->lexeme, "class") == 0) {
+			token->type = TOK_CLASS;
 		} else if (strcmp(token->lexeme, "data") == 0) {
 			token->type = TOK_DATA;
+		} else if (strcmp(token->lexeme, "instance") == 0) {
+			token->type = TOK_INSTANCE;
 		} else if (strcmp(token->lexeme, "let") == 0) {
 			token->type = TOK_LET;
 		} else if (strcmp(token->lexeme, "in") == 0) {

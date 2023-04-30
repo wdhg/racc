@@ -126,8 +126,16 @@ test scan_token_scans_arrow(void) { SCAN_TOKEN_HELPER(TOK_ARROW, "->"); }
 
 test scan_token_scans_keyword_if(void) { SCAN_TOKEN_HELPER(TOK_IF, "if"); }
 
+test scan_token_scans_keyword_class(void) {
+	SCAN_TOKEN_HELPER(TOK_CLASS, "class");
+}
+
 test scan_token_scans_keyword_data(void) {
 	SCAN_TOKEN_HELPER(TOK_DATA, "data");
+}
+
+test scan_token_scans_keyword_instance(void) {
+	SCAN_TOKEN_HELPER(TOK_INSTANCE, "instance");
 }
 
 test scan_token_scans_keyword_let(void) { SCAN_TOKEN_HELPER(TOK_LET, "let"); }
@@ -242,7 +250,9 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_colon_colon);
 	TEST(scan_token_scans_arrow);
 	TEST(scan_token_scans_keyword_if);
+	TEST(scan_token_scans_keyword_class);
 	TEST(scan_token_scans_keyword_data);
+	TEST(scan_token_scans_keyword_instance);
 	TEST(scan_token_scans_keyword_let);
 	TEST(scan_token_scans_keyword_in);
 	TEST(scan_token_scans_keyword_where);
