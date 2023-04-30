@@ -184,6 +184,139 @@ test parse_expr_reports_errors_on_unclosed_subexpressions(void) {
 	PASS();
 }
 
+test parse_type_parses_basic_concrete_types(void) {
+	struct parser p   = test_parser("String");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "String") == 0);
+	EXPECT(type->args_len == 0);
+	EXPECT(type->args == NULL);
+	PASS();
+}
+
+test parse_type_parses_parameterized_concrete_types(void) {
+	struct parser p   = test_parser("Maybe Int");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "Maybe") == 0);
+	EXPECT(type->args_len == 1);
+	EXPECT(strcmp(type->args[0]->name, "Int") == 0);
+	EXPECT(type->args[0]->args_len == 0);
+	EXPECT(type->args[0]->args == NULL);
+	PASS();
+}
+
+test parse_type_parses_basic_function_types(void) {
+	struct parser p   = test_parser("Int -> String");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "->") == 0);
+	EXPECT(type->args_len == 2);
+	EXPECT(strcmp(type->args[0]->name, "Int") == 0);
+	EXPECT(type->args[0]->args_len == 0);
+	EXPECT(type->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->name, "String") == 0);
+	EXPECT(type->args[1]->args_len == 0);
+	EXPECT(type->args[1]->args == NULL);
+	PASS();
+}
+
+test parse_type_parses_parameterized_function_types(void) {
+	struct parser p   = test_parser("Maybe Int -> Int");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "->") == 0);
+	EXPECT(type->args_len == 2);
+	EXPECT(strcmp(type->args[0]->name, "Maybe") == 0);
+	EXPECT(type->args[0]->args_len == 1);
+	EXPECT(strcmp(type->args[0]->args[0]->name, "Int") == 0)
+	EXPECT(type->args[0]->args[0]->args_len == 0);
+	EXPECT(type->args[0]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->name, "Int") == 0);
+	EXPECT(type->args[1]->args_len == 0);
+	EXPECT(type->args[1]->args == NULL);
+	PASS();
+}
+
+test parse_type_parses_multiple_argument_function_types(void) {
+	struct parser p   = test_parser("a -> b -> c");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "->") == 0);
+	EXPECT(type->args_len == 2);
+	EXPECT(strcmp(type->args[0]->name, "a") == 0);
+	EXPECT(type->args[0]->args_len == 0);
+	EXPECT(type->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->name, "->") == 0);
+	EXPECT(type->args[1]->args_len == 2);
+	EXPECT(strcmp(type->args[1]->args[0]->name, "b") == 0);
+	EXPECT(type->args[1]->args[0]->args_len == 0);
+	EXPECT(type->args[1]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->args[1]->name, "c") == 0);
+	EXPECT(type->args[1]->args[1]->args_len == 0);
+	EXPECT(type->args[1]->args[1]->args == NULL);
+	PASS();
+}
+
+test parse_type_parses_grouped_function_types(void) {
+	struct parser p   = test_parser("(a -> b) -> a -> b");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "->") == 0);
+	EXPECT(type->args_len == 2);
+	EXPECT(strcmp(type->args[0]->name, "->") == 0);
+	EXPECT(type->args[0]->args_len == 2);
+	EXPECT(strcmp(type->args[0]->args[0]->name, "a") == 0)
+	EXPECT(type->args[0]->args[0]->args_len == 0);
+	EXPECT(type->args[0]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[0]->args[1]->name, "b") == 0)
+	EXPECT(type->args[0]->args[1]->args_len == 0);
+	EXPECT(type->args[0]->args[1]->args == NULL);
+	EXPECT(strcmp(type->args[1]->name, "->") == 0);
+	EXPECT(type->args[1]->args_len == 2);
+	EXPECT(strcmp(type->args[1]->args[0]->name, "a") == 0)
+	EXPECT(type->args[1]->args[0]->args_len == 0);
+	EXPECT(type->args[1]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->args[1]->name, "b") == 0)
+	EXPECT(type->args[1]->args[1]->args_len == 0);
+	EXPECT(type->args[1]->args[1]->args == NULL);
+	PASS();
+}
+
+test parse_type_parses_complex_types(void) {
+	struct parser p =
+		test_parser("Either a b -> (b -> Either a c) -> Either a c");
+	struct type *type = parse_type(&p);
+	EXPECT(strcmp(type->name, "->") == 0);
+	EXPECT(type->args_len == 2);
+	EXPECT(strcmp(type->args[0]->name, "Either") == 0);
+	EXPECT(type->args[0]->args_len == 2);
+	EXPECT(strcmp(type->args[0]->args[0]->name, "a") == 0);
+	EXPECT(type->args[0]->args[0]->args_len == 0);
+	EXPECT(type->args[0]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[0]->args[1]->name, "b") == 0);
+	EXPECT(type->args[0]->args[1]->args_len == 0);
+	EXPECT(type->args[0]->args[1]->args == NULL);
+	EXPECT(strcmp(type->args[1]->name, "->") == 0);
+	EXPECT(type->args[1]->args_len == 2);
+	EXPECT(strcmp(type->args[1]->args[0]->name, "->") == 0);
+	EXPECT(type->args[1]->args[0]->args_len == 2);
+	EXPECT(strcmp(type->args[1]->args[0]->args[0]->name, "b") == 0);
+	EXPECT(type->args[1]->args[0]->args[0]->args_len == 0);
+	EXPECT(type->args[1]->args[0]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->args[0]->args[1]->name, "Either") == 0);
+	EXPECT(type->args[1]->args[0]->args[1]->args_len == 2);
+	EXPECT(strcmp(type->args[1]->args[0]->args[1]->args[0]->name, "a") == 0);
+	EXPECT(type->args[1]->args[0]->args[1]->args[0]->args_len == 0);
+	EXPECT(type->args[1]->args[0]->args[1]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->args[0]->args[1]->args[1]->name, "c") == 0);
+	EXPECT(type->args[1]->args[0]->args[1]->args[1]->args_len == 0);
+	EXPECT(type->args[1]->args[0]->args[1]->args[1]->args == NULL);
+	EXPECT(strcmp(type->args[1]->args[1]->name, "Either") == 0);
+	EXPECT(type->args[1]->args[1]->args_len == 2);
+	EXPECT(strcmp(type->args[1]->args[1]->args[0]->name, "a") == 0);
+	EXPECT(type->args[1]->args[1]->args[0]->args_len == 0);
+	EXPECT(type->args[1]->args[1]->args[0]->args == NULL);
+	EXPECT(strcmp(type->args[1]->args[1]->args[1]->name, "c") == 0);
+	EXPECT(type->args[1]->args[1]->args[1]->args_len == 0);
+	EXPECT(type->args[1]->args[1]->args[1]->args == NULL);
+	PASS();
+}
+
 void test_parser_h(void) {
 	TEST(parse_expr_parses_identifiers);
 	TEST(parse_expr_parses_ints);
@@ -200,4 +333,11 @@ void test_parser_h(void) {
 	TEST(parse_expr_parses_equality);
 	TEST(parse_expr_parses_grouped_expressions);
 	TEST(parse_expr_reports_errors_on_unclosed_subexpressions);
+	TEST(parse_type_parses_basic_concrete_types);
+	TEST(parse_type_parses_parameterized_concrete_types);
+	TEST(parse_type_parses_basic_function_types);
+	TEST(parse_type_parses_parameterized_function_types);
+	TEST(parse_type_parses_multiple_argument_function_types);
+	TEST(parse_type_parses_grouped_function_types);
+	TEST(parse_type_parses_complex_types);
 }

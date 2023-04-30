@@ -2,8 +2,8 @@
 #include "arena.h"
 #include "ast.h"
 #include "error.h"
+#include "list.h"
 #include "token.h"
-
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,15 +11,35 @@
 
 #define RACC_MAX_FUNC_ARGS 32
 
-/* expr        -> equality
- * equality    -> comparison ( ( "/=" | "==" ) comparison )*
- * comparison  -> term ( ( ">" | "<" | ">=" | "<=" ) term )*
- * term        -> factor ( ( "-" | "+" ) factor )*
- * factor      -> unary ( ( "/" | "*" ) unary )*
- * unary       ->  "-" unary  |  application
- * application -> IDENTIFIER primary+ | primary
- * primary     -> IDENTIFIER | INT | DOUBLE | STRING | "true" | "false"
- *              | "(" expr ")"
+/* program           -> stmt* EOF
+ *
+ * stmt              -> declaration | definition
+ *
+ * declaration       -> declrClass | declrData | declrType
+ * declrClass        -> "class" IDENTIFIER IDENTIFIER+ "{" declrType+ "}"
+ * declrData         -> "data" IDENTIFIER IDENTIFIER* "{"
+ *                      constructor ("|" constructor)+ "}"
+ * constructor       -> IDENTIFIER IDENTIFIER* ";"
+ * declrType         -> IDENTIFIER "::" type ("->" type)* ";"
+ * definition        -> defInstance | defValue
+ * defInstance       -> "instance" IDENTIFIER IDENTIFIER+ "{" defValue+ "}"
+ * defValue          -> IDENTIFIER IDENTIFIER "=" expr ";"
+ *
+ * type              -> typePrimary ( "->" typePrimary )*
+ * typeArrow         -> typeParameterized ( "->" typeArrow )*
+ * typeParameterized -> typeName typePrimary+ | typePrimary
+ * typePrimary       -> typeName | "(" type ")"
+ * typeName          -> IDENTIFIER
+ *
+ * expr              -> exprEquality
+ * exprEquality      -> exprComparison ( ( "/=" | "==" ) exprComparison )*
+ * exprComparison    -> exprTerm ( ( ">" | "<" | ">=" | "<=" ) exprTerm )*
+ * exprTerm          -> exprFactor ( ( "-" | "+" ) exprFactor )*
+ * exprFactor        -> exprUnary ( ( "/" | "*" ) exprUnary )*
+ * exprUnary         ->  "-" exprUnary  |  exprApplication
+ * exprApplication   -> IDENTIFIER exprPrimary+ | exprPrimary
+ * exprPrimary       -> IDENTIFIER | INT | DOUBLE | STRING | "true" | "false"
+ *                    | "(" expr ")"
  */
 
 /* ========== PARSER ========== */
@@ -265,4 +285,78 @@ struct expr *parse_expr(struct parser *p) {
 	struct expr *expr;
 	expr = parse_equality(p);
 	return expr;
+}
+
+/* ========== TYPES ========== */
+
+static int is_type_primary(enum token_type type) {
+	switch (type) {
+	case TOK_IDENTIFIER:
+	case TOK_PAREN_L: return 1;
+	default: return 0;
+	}
+}
+
+static struct type *parse_type_name(struct parser *p) {
+	struct type *type = arena_push_struct_zero(p->arena, struct type);
+	struct token *token_name;
+	if (!consume(p, TOK_IDENTIFIER, "Expected type identifier")) {
+		return NULL;
+	}
+	token_name = previous(p);
+	type->name =
+		arena_push_array_zero(p->arena, token_name->lexeme_len + 1, char);
+	strlcpy(type->name, token_name->lexeme, token_name->lexeme_len + 1);
+	return type;
+}
+
+static struct type *parse_type_primary(struct parser *p) {
+	if (match(p, TOK_PAREN_L)) {
+		struct type *type = parse_type(p);
+		if (!consume(p, TOK_PAREN_R, "Expected ')' after expression.")) {
+			return NULL;
+		}
+		return type;
+	}
+
+	return parse_type_name(p);
+}
+
+static struct type *parse_type_parameterized(struct parser *p) {
+	if (peek(p)->type == TOK_IDENTIFIER && is_type_primary(peek_next(p)->type)) {
+		struct type *type = parse_type_name(p);
+		struct list list  = list_new(arena_alloc());
+		while (!is_at_end(p) && is_type_primary(peek(p)->type)) {
+			list_append(&list, parse_type_name(p));
+		}
+		type->args     = (struct type **)list_to_array(&list, p->arena);
+		type->args_len = list_length(&list);
+		arena_free(list.arena);
+		return type;
+	}
+	return parse_type_primary(p);
+}
+
+static struct type *parse_type_arrow(struct parser *p) {
+	struct type *type = parse_type_parameterized(p);
+
+	while (match(p, TOK_ARROW)) {
+		struct type *lhs = type;
+		struct type *rhs = arena_push_struct_zero(p->arena, struct type);
+		rhs              = parse_type_arrow(p);
+		type             = arena_push_struct_zero(p->arena, struct type);
+		type->name       = "->";
+		type->args       = arena_push_array_zero(p->arena, 2, struct type *);
+		type->args[0]    = lhs;
+		type->args[1]    = rhs;
+		type->args_len   = 2;
+	}
+
+	return type;
+}
+
+struct type *parse_type(struct parser *p) {
+	struct type *type;
+	type = parse_type_arrow(p);
+	return type;
 }

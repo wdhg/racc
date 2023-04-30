@@ -15,5 +15,7 @@ struct parser {
 };
 
 struct expr *parse_expr(struct parser *p);
+struct type *parse_type(struct parser *p);
+struct stmt *parse_stmt(struct parser *p);
 
 #endif

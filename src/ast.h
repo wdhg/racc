@@ -48,4 +48,10 @@ struct expr {
 	} v;
 };
 
+struct type {
+	char *name;
+	struct type **args;
+	size_t args_len;
+};
+
 #endif
