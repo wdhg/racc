@@ -40,7 +40,6 @@ enum token_type {
 	TOK_SEMICOLON,
 	TOK_CURLY_L,
 	TOK_CURLY_R
-
 };
 
 struct token {
