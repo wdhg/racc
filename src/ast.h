@@ -54,4 +54,57 @@ struct type {
 	size_t args_len;
 };
 
+struct dec_type {
+	char *name;
+	struct type *type;
+};
+
+struct dec_constructor {
+	char *name;
+	struct type **args;
+};
+
+struct def_value {
+	char *name;
+	struct expr *value;
+};
+
+enum stmt_type {
+	STMT_DEC_CLASS,
+	STMT_DEC_DATA,
+	STMT_DEC_TYPE,
+	STMT_DEF_INSTANCE,
+	STMT_DEF_VALUE
+};
+
+struct stmt {
+	enum stmt_type type;
+
+	union {
+		struct {
+			char *name;
+			char *type_var;
+			struct dec_type **declarations;
+			size_t declarations_len;
+		} dec_class;
+
+		struct {
+			char *name;
+			struct dec_constructor **constructors;
+			size_t constructors_len;
+		} dec_data;
+
+		struct dec_type *dec_type;
+
+		struct {
+			char *class_name;
+			char **class_args;
+			struct def_value **definitions;
+			size_t definitions_len;
+		} def_instance;
+
+		struct def_value def_value;
+	} v;
+};
+
 #endif
