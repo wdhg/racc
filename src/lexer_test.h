@@ -116,6 +116,8 @@ test scan_token_scans_not_equal_symbols(void) {
 	SCAN_TOKEN_HELPER(TOK_NE, "/=");
 }
 
+test scan_token_scans_equal_symbols(void) { SCAN_TOKEN_HELPER(TOK_EQ, "="); }
+
 test scan_token_scans_colon(void) { SCAN_TOKEN_HELPER(TOK_COLON, ":"); }
 
 test scan_token_scans_colon_colon(void) {
@@ -250,6 +252,7 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_greater_than_or_equal_symbols);
 	TEST(scan_token_scans_equal_equal_symbols);
 	TEST(scan_token_scans_not_equal_symbols);
+	TEST(scan_token_scans_equal_symbols);
 	TEST(scan_token_scans_colon);
 	TEST(scan_token_scans_colon_colon);
 	TEST(scan_token_scans_arrow);
