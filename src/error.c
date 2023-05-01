@@ -45,7 +45,7 @@ void report_error_at(struct error_log *log, char *error_msg, size_t index) {
 		if (log->source[char_index] == '\n') {
 			line++;
 			column     = 0;
-			line_index = char_index;
+			line_index = char_index + 1;
 		} else {
 			column++;
 		}
