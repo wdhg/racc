@@ -364,3 +364,69 @@ struct type *parse_type(struct parser *p) {
 	type = parse_type_arrow(p);
 	return type;
 }
+
+/* ========== STATEMENTS ========== */
+
+struct dec_type *parse_dec_type(struct parser *p) {
+	struct dec_type *dec_type = arena_push_struct_zero(p->arena, struct dec_type);
+	struct token *token;
+	if (!consume(p, TOK_IDENTIFIER, "Expected identifier")) {
+		return NULL;
+	}
+	token          = previous(p);
+	dec_type->name = copy_lexeme_text(p, token->lexeme, token->lexeme_len);
+	if (!consume(p, TOK_COLON_COLON, "Expected '::' after identifier")) {
+		return NULL;
+	}
+	dec_type->type = parse_type(p);
+	if (!consume(p, TOK_SEMICOLON, "Expected ';' after type")) {
+		return NULL;
+	}
+	return dec_type;
+}
+
+static struct stmt *parse_stmt_class(struct parser *p) {
+	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
+	struct list declarations = list_new(arena_alloc());
+	struct token *token;
+	stmt->type = STMT_DEC_CLASS;
+	if (!consume(p, TOK_IDENTIFIER, "Expected class name")) {
+		return NULL;
+	}
+	token = previous(p);
+	stmt->v.dec_class.name =
+		copy_lexeme_text(p, token->lexeme, token->lexeme_len);
+	if (!consume(p, TOK_IDENTIFIER, "Expected type variable")) {
+		return NULL;
+	}
+	token = previous(p);
+	stmt->v.dec_class.type_var =
+		copy_lexeme_text(p, token->lexeme, token->lexeme_len);
+	if (!consume(p, TOK_CURLY_L, "Expected '{' before class declaration")) {
+		return NULL;
+	}
+	while (!is_at_end(p) && peek(p)->type == TOK_IDENTIFIER) {
+		struct dec_type *dec_type = parse_dec_type(p);
+		if (dec_type == NULL) {
+			return NULL;
+		}
+		list_append(&declarations, dec_type);
+	}
+	stmt->v.dec_class.declarations =
+		(struct dec_type **)list_to_array(&declarations, p->arena);
+	stmt->v.dec_class.declarations_len = list_length(&declarations);
+	arena_free(declarations.arena);
+	if (!consume(p, TOK_CURLY_R, "Expected '}' after class declaration")) {
+		return NULL;
+	}
+	return stmt;
+}
+
+struct stmt *parse_stmt(struct parser *p) {
+	struct token *token = advance(p);
+
+	switch (token->type) {
+	case TOK_CLASS: return parse_stmt_class(p);
+	default: assert(0);
+	}
+}

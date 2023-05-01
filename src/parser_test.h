@@ -3,8 +3,17 @@
 #include "parser.h"
 
 #include <ctest.h>
+#include <string.h>
 
 #include "lexer.h"
+
+static int type_node_equals(
+	struct type *type, char *expected_name, size_t expected_args_len
+) {
+	return strcmp(type->name, expected_name) == 0 &&
+	       type->args_len == expected_args_len &&
+	       (type->args_len > 0 || type->args == NULL);
+}
 
 struct parser test_parser(char *source) {
 	struct parser p;
@@ -317,6 +326,66 @@ test parse_type_parses_complex_types(void) {
 	PASS();
 }
 
+test parse_stmt_parses_basic_class_declarations(void) {
+	struct parser p =
+		test_parser("class Functor a {\n  fmap :: (a -> b) -> f a -> f b;\n} ");
+	struct stmt *stmt = parse_stmt(&p);
+	struct type *type;
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEC_CLASS);
+	EXPECT(strcmp(stmt->v.dec_class.name, "Functor") == 0);
+	EXPECT(strcmp(stmt->v.dec_class.type_var, "a") == 0);
+	EXPECT(stmt->v.dec_class.declarations_len == 1);
+	EXPECT(strcmp(stmt->v.dec_class.declarations[0]->name, "fmap") == 0);
+	type = stmt->v.dec_class.declarations[0]->type;
+	EXPECT(type_node_equals(type, "->", 2));
+	EXPECT(type_node_equals(type->args[0], "->", 2));
+	EXPECT(type_node_equals(type->args[0]->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[0]->args[1], "b", 0));
+	EXPECT(type_node_equals(type->args[1], "->", 2));
+	EXPECT(type_node_equals(type->args[1]->args[0], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[0]->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[1]->args[1], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[1]->args[0], "b", 0));
+	PASS();
+}
+
+test parse_stmt_parses_class_declarations(void) {
+	struct parser p =
+		test_parser("class Applicative a {\n  pure :: a -> f a;\n  liftA2 :: (a -> "
+	              "b -> c) -> f a -> f b -> f c;\n} ");
+	struct stmt *stmt = parse_stmt(&p);
+	struct type *type;
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEC_CLASS);
+	EXPECT(strcmp(stmt->v.dec_class.name, "Applicative") == 0);
+	EXPECT(strcmp(stmt->v.dec_class.type_var, "a") == 0);
+	EXPECT(stmt->v.dec_class.declarations_len == 2);
+	EXPECT(strcmp(stmt->v.dec_class.declarations[0]->name, "pure") == 0);
+	type = stmt->v.dec_class.declarations[0]->type;
+	EXPECT(type_node_equals(type, "->", 2));
+	EXPECT(type_node_equals(type->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[1], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[0], "a", 0));
+	EXPECT(strcmp(stmt->v.dec_class.declarations[1]->name, "liftA2") == 0);
+	type = stmt->v.dec_class.declarations[1]->type;
+	EXPECT(type_node_equals(type, "->", 2));
+	EXPECT(type_node_equals(type->args[0], "->", 2));
+	EXPECT(type_node_equals(type->args[0]->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[0]->args[1], "->", 2));
+	EXPECT(type_node_equals(type->args[0]->args[1]->args[0], "b", 0));
+	EXPECT(type_node_equals(type->args[0]->args[1]->args[1], "c", 0));
+	EXPECT(type_node_equals(type->args[1], "->", 2));
+	EXPECT(type_node_equals(type->args[1]->args[0], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[0]->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[1]->args[1], "->", 2));
+	EXPECT(type_node_equals(type->args[1]->args[1]->args[0], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[1]->args[0]->args[0], "b", 0));
+	EXPECT(type_node_equals(type->args[1]->args[1]->args[1], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[1]->args[1]->args[0], "c", 0));
+	PASS();
+}
+
 void test_parser_h(void) {
 	TEST(parse_expr_parses_identifiers);
 	TEST(parse_expr_parses_ints);
@@ -340,4 +409,6 @@ void test_parser_h(void) {
 	TEST(parse_type_parses_multiple_argument_function_types);
 	TEST(parse_type_parses_grouped_function_types);
 	TEST(parse_type_parses_complex_types);
+	TEST(parse_stmt_parses_basic_class_declarations);
+	TEST(parse_stmt_parses_class_declarations);
 }
