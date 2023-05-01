@@ -164,6 +164,8 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case ';': token->type = TOK_SEMICOLON; break;
 	case '{': token->type = TOK_CURLY_L; break;
 	case '}': token->type = TOK_CURLY_R; break;
+	case '[': token->type = TOK_SQUARE_L; break;
+	case ']': token->type = TOK_SQUARE_R; break;
 	default:
 		if (isnumber(c)) {
 			scan_token_number(token, s);

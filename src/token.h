@@ -42,7 +42,9 @@ enum token_type {
 	TOK_WHERE,
 	TOK_SEMICOLON,
 	TOK_CURLY_L,
-	TOK_CURLY_R
+	TOK_CURLY_R,
+	TOK_SQUARE_L,
+	TOK_SQUARE_R
 };
 
 struct token {
