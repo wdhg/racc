@@ -113,7 +113,7 @@ static void scan_token_number(struct token *token, struct scanner *s) {
 }
 
 static void scan_token_identifier(struct token *token, struct scanner *s) {
-	while (isalpha(peek(s))) {
+	while (isalnum(peek(s))) {
 		advance(s);
 	}
 	token->type = TOK_IDENTIFIER;
