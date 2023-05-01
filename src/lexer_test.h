@@ -124,6 +124,10 @@ test scan_token_scans_colon_colon(void) {
 
 test scan_token_scans_arrow(void) { SCAN_TOKEN_HELPER(TOK_ARROW, "->"); }
 
+test scan_token_scans_equal_arrow_symbols(void) {
+	SCAN_TOKEN_HELPER(TOK_EQ_ARROW, "=>");
+}
+
 test scan_token_scans_keyword_if(void) { SCAN_TOKEN_HELPER(TOK_IF, "if"); }
 
 test scan_token_scans_keyword_class(void) {
@@ -249,6 +253,7 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_colon);
 	TEST(scan_token_scans_colon_colon);
 	TEST(scan_token_scans_arrow);
+	TEST(scan_token_scans_equal_arrow_symbols);
 	TEST(scan_token_scans_keyword_if);
 	TEST(scan_token_scans_keyword_class);
 	TEST(scan_token_scans_keyword_data);

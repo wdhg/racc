@@ -74,6 +74,21 @@ scan_token_with_slash_prefix(struct token *token, struct scanner *s) {
 	}
 }
 
+static void
+scan_token_with_equals_prefix(struct token *token, struct scanner *s) {
+	switch (peek(s)) {
+	case '=':
+		advance(s);
+		token->type = TOK_EQ_EQ;
+		break;
+	case '>':
+		advance(s);
+		token->type = TOK_EQ_ARROW;
+		break;
+	default: token->type = TOK_EQ; break;
+	}
+}
+
 static void scan_token_string(struct token *token, struct scanner *s) {
 	while (!is_at_end(s) && advance(s) != '"') {
 		if (is_at_end(s)) {
@@ -142,7 +157,7 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case '*': token->type = TOK_MUL; break;
 	case '<': token->type = match(s, '=') ? TOK_LT_EQ : TOK_LT; break;
 	case '>': token->type = match(s, '=') ? TOK_GT_EQ : TOK_GT; break;
-	case '=': token->type = match(s, '=') ? TOK_EQ_EQ : TOK_EQ; break;
+	case '=': scan_token_with_equals_prefix(token, s); break;
 	case ':': token->type = match(s, ':') ? TOK_COLON_COLON : TOK_COLON; break;
 	case '|': token->type = TOK_PIPE; break;
 	case '\\': token->type = TOK_LAMBDA; break;

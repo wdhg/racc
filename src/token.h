@@ -30,6 +30,7 @@ enum token_type {
 	TOK_NE,
 	TOK_COLON_COLON,
 	TOK_ARROW,
+	TOK_EQ_ARROW,
 	TOK_PIPE,
 	TOK_LAMBDA,
 	TOK_IF,
