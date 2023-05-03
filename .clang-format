@@ -7,7 +7,8 @@ UseTab: AlignWithSpaces
 AlignConsecutiveAssignments: AcrossComments
 AlignConsecutiveBitFields: AcrossComments
 AlignConsecutiveMacros: AcrossComments
-AlignAfterOpenBracket: BlockIndent
+BinPackParameters: false
+BinPackArguments: false
 SeparateDefinitionBlocks: Always
 AllowShortCaseLabelsOnASingleLine: true
 ColumnLimit: 80
