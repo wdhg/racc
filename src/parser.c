@@ -107,7 +107,7 @@ static char *parse_identifier(struct parser *p, char *error_msg) {
 
 /* ========== EXPRESSIONS ========== */
 
-static int is_primary(enum token_type token_type) {
+static int is_expr_primary(enum token_type token_type) {
 	switch (token_type) {
 	case TOK_IDENTIFIER:
 	case TOK_INT:
@@ -120,7 +120,7 @@ static int is_primary(enum token_type token_type) {
 	}
 }
 
-static struct expr *parse_primary(struct parser *p) {
+static struct expr *parse_expr_primary(struct parser *p) {
 	struct token *token = advance(p);
 	struct expr *expr   = arena_push_struct_zero(p->arena, struct expr);
 	switch (token->type) {
@@ -173,8 +173,8 @@ static struct expr *parse_primary(struct parser *p) {
 	return expr;
 }
 
-static struct expr *parse_application(struct parser *p) {
-	if (peek(p)->type == TOK_IDENTIFIER && is_primary(peek_next(p)->type)) {
+static struct expr *parse_expr_application(struct parser *p) {
+	if (peek(p)->type == TOK_IDENTIFIER && is_expr_primary(peek_next(p)->type)) {
 		struct token *token    = advance(p);
 		struct expr *expr      = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
@@ -182,8 +182,8 @@ static struct expr *parse_application(struct parser *p) {
 		expr->v.application.args =
 			arena_push_array_zero(p->arena, RACC_MAX_FUNC_ARGS, struct expr *);
 		expr->v.application.args_len = 0;
-		while (!is_at_end(p) && is_primary(peek(p)->type)) {
-			struct expr *arg = parse_primary(p);
+		while (!is_at_end(p) && is_expr_primary(peek(p)->type)) {
+			struct expr *arg = parse_expr_primary(p);
 			if (arg == NULL) {
 				return NULL;
 			}
@@ -192,14 +192,14 @@ static struct expr *parse_application(struct parser *p) {
 		}
 		return expr;
 	}
-	return parse_primary(p);
+	return parse_expr_primary(p);
 }
 
-static struct expr *parse_unary(struct parser *p) {
+static struct expr *parse_expr_unary(struct parser *p) {
 	if (match(p, TOK_SUB)) {
 		struct expr *expr;
 		struct token *op = previous(p);
-		struct expr *rhs = parse_unary(p);
+		struct expr *rhs = parse_expr_unary(p);
 		if (rhs == NULL) {
 			return NULL;
 		}
@@ -209,18 +209,18 @@ static struct expr *parse_unary(struct parser *p) {
 		expr->v.unary.rhs = rhs;
 		return expr;
 	}
-	return parse_application(p);
+	return parse_expr_application(p);
 }
 
-static struct expr *parse_factor(struct parser *p) {
-	struct expr *expr = parse_unary(p);
+static struct expr *parse_expr_factor(struct parser *p) {
+	struct expr *expr = parse_expr_unary(p);
 	if (expr == NULL) {
 		return NULL;
 	}
 	while (match(p, TOK_MUL) || match(p, TOK_DIV)) {
 		struct expr *lhs = expr;
 		struct token *op = previous(p);
-		struct expr *rhs = parse_unary(p);
+		struct expr *rhs = parse_expr_unary(p);
 		if (rhs == NULL) {
 			return NULL;
 		}
@@ -233,15 +233,15 @@ static struct expr *parse_factor(struct parser *p) {
 	return expr;
 }
 
-static struct expr *parse_term(struct parser *p) {
-	struct expr *expr = parse_factor(p);
+static struct expr *parse_expr_term(struct parser *p) {
+	struct expr *expr = parse_expr_factor(p);
 	if (expr == NULL) {
 		return NULL;
 	}
 	while (match(p, TOK_ADD) || match(p, TOK_SUB)) {
 		struct expr *lhs = expr;
 		struct token *op = previous(p);
-		struct expr *rhs = parse_factor(p);
+		struct expr *rhs = parse_expr_factor(p);
 		if (rhs == NULL) {
 			return NULL;
 		}
@@ -254,8 +254,8 @@ static struct expr *parse_term(struct parser *p) {
 	return expr;
 }
 
-static struct expr *parse_comparison(struct parser *p) {
-	struct expr *expr = parse_term(p);
+static struct expr *parse_expr_comparison(struct parser *p) {
+	struct expr *expr = parse_expr_term(p);
 	if (expr == NULL) {
 		return NULL;
 	}
@@ -263,7 +263,7 @@ static struct expr *parse_comparison(struct parser *p) {
 	       match(p, TOK_GT_EQ)) {
 		struct expr *lhs = expr;
 		struct token *op = previous(p);
-		struct expr *rhs = parse_term(p);
+		struct expr *rhs = parse_expr_term(p);
 		if (rhs == NULL) {
 			return NULL;
 		}
@@ -276,15 +276,15 @@ static struct expr *parse_comparison(struct parser *p) {
 	return expr;
 }
 
-static struct expr *parse_equality(struct parser *p) {
-	struct expr *expr = parse_comparison(p);
+static struct expr *parse_expr_equality(struct parser *p) {
+	struct expr *expr = parse_expr_comparison(p);
 	if (expr == NULL) {
 		return NULL;
 	}
 	while (match(p, TOK_EQ_EQ) || match(p, TOK_NE)) {
 		struct expr *lhs = expr;
 		struct token *op = previous(p);
-		struct expr *rhs = parse_comparison(p);
+		struct expr *rhs = parse_expr_comparison(p);
 		if (rhs == NULL) {
 			return NULL;
 		}
@@ -299,7 +299,7 @@ static struct expr *parse_equality(struct parser *p) {
 
 struct expr *parse_expr(struct parser *p) {
 	struct expr *expr;
-	expr = parse_equality(p);
+	expr = parse_expr_equality(p);
 	return expr;
 }
 
