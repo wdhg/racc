@@ -48,7 +48,19 @@ struct expr {
 	} v;
 };
 
+struct type_constraint {
+	char *name;
+	char **args;
+	size_t args_len;
+};
+
+struct type_context {
+	struct type_constraint **constraints;
+	size_t constraints_len;
+};
+
 struct type {
+	struct type_context *context;
 	char *name;
 	struct type **args;
 	size_t args_len;

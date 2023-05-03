@@ -7,9 +7,9 @@
 
 #include "lexer.h"
 
-static int type_node_equals(
-	struct type *type, char *expected_name, size_t expected_args_len
-) {
+static int type_node_equals(struct type *type,
+                            char *expected_name,
+                            size_t expected_args_len) {
 	return strcmp(type->name, expected_name) == 0 &&
 	       type->args_len == expected_args_len &&
 	       (type->args_len > 0 || type->args == NULL);
@@ -326,6 +326,31 @@ test parse_type_parses_complex_types(void) {
 	PASS();
 }
 
+test parse_type_parses_type_contexts(void) {
+	struct parser p   = test_parser("[Eq a, Functor f] => f a -> f a -> Bool");
+	struct type *type = parse_type(&p);
+	EXPECT(type != NULL);
+	EXPECT(type->context != NULL);
+	EXPECT(type->context->constraints_len == 2);
+	EXPECT(strcmp(type->context->constraints[0]->name, "Eq") == 0);
+	EXPECT(type->context->constraints[0]->args_len == 1);
+	EXPECT(type->context->constraints[0]->args != NULL);
+	EXPECT(strcmp(type->context->constraints[0]->args[0], "a") == 0);
+	EXPECT(strcmp(type->context->constraints[1]->name, "Functor") == 0);
+	EXPECT(type->context->constraints[1]->args_len == 1);
+	EXPECT(type->context->constraints[1]->args != NULL);
+	EXPECT(strcmp(type->context->constraints[1]->args[0], "f") == 0);
+
+	EXPECT(type_node_equals(type, "->", 2));
+	EXPECT(type_node_equals(type->args[0], "f", 1));
+	EXPECT(type_node_equals(type->args[0]->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[1], "->", 2));
+	EXPECT(type_node_equals(type->args[1]->args[0], "f", 1));
+	EXPECT(type_node_equals(type->args[1]->args[0]->args[0], "a", 0));
+	EXPECT(type_node_equals(type->args[1]->args[1], "Bool", 0));
+	PASS();
+}
+
 test parse_stmt_parses_basic_class_declarations(void) {
 	struct parser p =
 		test_parser("class Functor a {\n  fmap :: (a -> b) -> f a -> f b;\n} ");
@@ -409,6 +434,7 @@ void test_parser_h(void) {
 	TEST(parse_type_parses_multiple_argument_function_types);
 	TEST(parse_type_parses_grouped_function_types);
 	TEST(parse_type_parses_complex_types);
+	TEST(parse_type_parses_type_contexts);
 	TEST(parse_stmt_parses_basic_class_declarations);
 	TEST(parse_stmt_parses_class_declarations);
 }

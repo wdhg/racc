@@ -25,7 +25,9 @@
  * defInstance       -> "instance" IDENTIFIER IDENTIFIER+ "{" defValue+ "}"
  * defValue          -> IDENTIFIER IDENTIFIER "=" expr ";"
  *
- * type              -> typePrimary ( "->" typePrimary )*
+ * type              -> typeContext? typeArrow
+ * typeContext       -> "[" typeName typeName+ ("," typeName typeName+ )* "]"
+ *                      "=>"
  * typeArrow         -> typeParameterized ( "->" typeArrow )*
  * typeParameterized -> typeName typePrimary+ | typePrimary
  * typePrimary       -> typeName | "(" type ")"
@@ -87,11 +89,20 @@ consume(struct parser *p, enum token_type token_type, char *error_msg) {
 	return result;
 }
 
-static char *copy_lexeme_text(struct parser *p, char *text, size_t len) {
+static char *copy_text(struct parser *p, char *text, size_t len) {
 	char *text_copy = arena_push_array_zero(p->arena, len + 1, char);
 	strncpy(text_copy, text, len);
 	text_copy[len] = '\0'; /* ensure null terminator */
 	return text_copy;
+}
+
+static char *parse_identifier(struct parser *p, char *error_msg) {
+	struct token *token;
+	if (!consume(p, TOK_IDENTIFIER, error_msg)) {
+		return NULL;
+	}
+	token = previous(p);
+	return copy_text(p, token->lexeme, token->lexeme_len);
 }
 
 /* ========== EXPRESSIONS ========== */
@@ -114,9 +125,8 @@ static struct expr *parse_primary(struct parser *p) {
 	struct expr *expr   = arena_push_struct_zero(p->arena, struct expr);
 	switch (token->type) {
 	case TOK_IDENTIFIER:
-		expr->type = EXPR_IDENTIFIER;
-		expr->v.identifier =
-			copy_lexeme_text(p, token->lexeme, token->lexeme_len + 1);
+		expr->type         = EXPR_IDENTIFIER;
+		expr->v.identifier = copy_text(p, token->lexeme, token->lexeme_len + 1);
 		break;
 	case TOK_INT:
 		expr->type = EXPR_LIT_INT;
@@ -129,7 +139,7 @@ static struct expr *parse_primary(struct parser *p) {
 	case TOK_STRING: {
 		expr->type = EXPR_LIT_STRING;
 		expr->v.lit_string =
-			copy_lexeme_text(p, &token->lexeme[1], token->lexeme_len - 2); /* -2 " */
+			copy_text(p, &token->lexeme[1], token->lexeme_len - 2); /* -2 " */
 		break;
 	}
 	case TOK_CHAR:
@@ -143,7 +153,8 @@ static struct expr *parse_primary(struct parser *p) {
 		break;
 	case TOK_PAREN_L: {
 		struct expr *sub_expr = parse_expr(p);
-		if (sub_expr == NULL || !consume(p, TOK_PAREN_R, "Expected ')' after expression.")) {
+		if (sub_expr == NULL ||
+		    !consume(p, TOK_PAREN_R, "Expected ')' after expression.")) {
 			return NULL;
 		}
 		expr->type       = EXPR_GROUPING;
@@ -152,8 +163,7 @@ static struct expr *parse_primary(struct parser *p) {
 	}
 	case TOK_EOF:
 		report_error_at(
-			p->error_log, "Unexpected end of file", token->lexeme_index
-		);
+			p->error_log, "Unexpected end of file", token->lexeme_index);
 		return NULL;
 	default:
 		report_error_at(p->error_log, "Unexpected token", token->lexeme_index);
@@ -310,7 +320,7 @@ static struct type *parse_type_name(struct parser *p) {
 		return NULL;
 	}
 	token_name = previous(p);
-	type->name = copy_lexeme_text(p, token_name->lexeme, token_name->lexeme_len);
+	type->name = copy_text(p, token_name->lexeme, token_name->lexeme_len);
 	return type;
 }
 
@@ -359,9 +369,71 @@ static struct type *parse_type_arrow(struct parser *p) {
 	return type;
 }
 
+static struct type_constraint *parse_type_constraint(struct parser *p) {
+	struct type_constraint *constraint;
+	struct list constraint_args;
+	constraint       = arena_push_struct_zero(p->arena, struct type_constraint);
+	constraint_args  = list_new(arena_alloc());
+	constraint->name = parse_identifier(p, "Expected class name");
+	if (constraint->name == NULL) {
+		return NULL;
+	}
+	while (peek(p)->type == TOK_IDENTIFIER) {
+		char *arg = parse_identifier(p, "Expected type variable");
+		if (arg == NULL) {
+			return NULL;
+		}
+		list_append(&constraint_args, arg);
+	}
+	constraint->args     = (char **)list_to_array(&constraint_args, p->arena);
+	constraint->args_len = list_length(&constraint_args);
+	arena_free(constraint_args.arena);
+	return constraint;
+}
+
+struct type_context *parse_type_context(struct parser *p) {
+	struct type_context *context;
+	struct list constraints;
+	struct type_constraint *constraint;
+	if (!match(p, TOK_SQUARE_L)) {
+		return NULL;
+	}
+	context     = arena_push_struct_zero(p->arena, struct type_context);
+	constraints = list_new(arena_alloc());
+	constraint  = parse_type_constraint(p);
+	if (constraint == NULL) {
+		return NULL;
+	}
+	list_append(&constraints, constraint);
+	while (match(p, TOK_COMMA)) {
+		constraint = parse_type_constraint(p);
+		if (constraint == NULL) {
+			return NULL;
+		}
+		list_append(&constraints, constraint);
+	}
+	context->constraints =
+		(struct type_constraint **)list_to_array(&constraints, p->arena);
+	context->constraints_len = list_length(&constraints);
+	arena_free(constraints.arena);
+	if (!consume(p, TOK_SQUARE_R, "Missing closing ']' after type context") ||
+	    !consume(p, TOK_EQ_ARROW, "Expected '=>' after type context")) {
+		return NULL;
+	};
+	return context;
+}
+
 struct type *parse_type(struct parser *p) {
 	struct type *type;
+	struct type_context *context;
+	context = parse_type_context(p);
+	if (p->error_log->had_error) {
+		return NULL;
+	}
 	type = parse_type_arrow(p);
+	if (type != NULL) {
+		type->context = context;
+	}
 	return type;
 }
 
@@ -374,7 +446,7 @@ struct dec_type *parse_dec_type(struct parser *p) {
 		return NULL;
 	}
 	token          = previous(p);
-	dec_type->name = copy_lexeme_text(p, token->lexeme, token->lexeme_len);
+	dec_type->name = copy_text(p, token->lexeme, token->lexeme_len);
 	if (!consume(p, TOK_COLON_COLON, "Expected '::' after identifier")) {
 		return NULL;
 	}
@@ -386,22 +458,11 @@ struct dec_type *parse_dec_type(struct parser *p) {
 }
 
 static struct stmt *parse_stmt_class(struct parser *p) {
-	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
-	struct list declarations = list_new(arena_alloc());
-	struct token *token;
-	stmt->type = STMT_DEC_CLASS;
-	if (!consume(p, TOK_IDENTIFIER, "Expected class name")) {
-		return NULL;
-	}
-	token = previous(p);
-	stmt->v.dec_class.name =
-		copy_lexeme_text(p, token->lexeme, token->lexeme_len);
-	if (!consume(p, TOK_IDENTIFIER, "Expected type variable")) {
-		return NULL;
-	}
-	token = previous(p);
-	stmt->v.dec_class.type_var =
-		copy_lexeme_text(p, token->lexeme, token->lexeme_len);
+	struct stmt *stmt          = arena_push_struct_zero(p->arena, struct stmt);
+	struct list declarations   = list_new(arena_alloc());
+	stmt->type                 = STMT_DEC_CLASS;
+	stmt->v.dec_class.name     = parse_identifier(p, "Expected class name");
+	stmt->v.dec_class.type_var = parse_identifier(p, "Expected type variable");
 	if (!consume(p, TOK_CURLY_L, "Expected '{' before class declaration")) {
 		return NULL;
 	}

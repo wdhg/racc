@@ -44,7 +44,8 @@ enum token_type {
 	TOK_CURLY_L,
 	TOK_CURLY_R,
 	TOK_SQUARE_L,
-	TOK_SQUARE_R
+	TOK_SQUARE_R,
+	TOK_COMMA
 };
 
 struct token {

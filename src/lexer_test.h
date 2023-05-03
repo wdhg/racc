@@ -174,6 +174,8 @@ test scan_token_scans_right_square_bracket(void) {
 	SCAN_TOKEN_HELPER(TOK_SQUARE_R, "]");
 }
 
+test scan_token_scans_comma(void) { SCAN_TOKEN_HELPER(TOK_COMMA, ","); }
+
 test scan_tokens_scans_a_sequence_of_tokens(void) {
 	struct token **tokens;
 	char *source        = "let x = 300 in\ny*x ==600";
@@ -279,5 +281,6 @@ void test_lexer_h(void) {
 	TEST(scan_token_scans_right_curly_bracket);
 	TEST(scan_token_scans_left_square_bracket);
 	TEST(scan_token_scans_right_square_bracket);
+	TEST(scan_token_scans_comma);
 	TEST(scan_tokens_scans_a_sequence_of_tokens);
 }
