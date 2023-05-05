@@ -447,6 +447,7 @@ static struct stmt *parse_stmt_class(struct parser *p) {
 	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
 	struct list declarations = list_new(arena_alloc());
 	stmt->type               = STMT_DEC_CLASS;
+	CONSUME(TOK_CLASS, "Expected class keyword");
 	PARSE_IDENTIFIER(stmt->v.dec_class.name, "Expected class name");
 	PARSE_IDENTIFIER(stmt->v.dec_class.type_var, "Expected type variable");
 	CONSUME(TOK_CURLY_L, "Expected '{' before class declaration");
@@ -488,6 +489,7 @@ static struct stmt *parse_stmt_data(struct parser *p) {
 	struct list type_vars    = list_new(arena_alloc());
 	struct list constructors = list_new(arena_alloc());
 	stmt->type               = STMT_DEC_DATA;
+	CONSUME(TOK_DATA, "Expected data keyword");
 	PARSE_IDENTIFIER(stmt->v.dec_data.name, "Expected data identifier");
 	while (peek(p)->type == TOK_IDENTIFIER) {
 		char *type_var;
@@ -517,9 +519,7 @@ static struct stmt *parse_stmt_data(struct parser *p) {
 }
 
 struct stmt *parse_stmt(struct parser *p) {
-	struct token *token = advance(p);
-
-	switch (token->type) {
+	switch (peek(p)->type) {
 	case TOK_CLASS: return parse_stmt_class(p);
 	case TOK_DATA: return parse_stmt_data(p);
 	default: assert(0);
