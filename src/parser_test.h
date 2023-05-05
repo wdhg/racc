@@ -411,6 +411,31 @@ test parse_stmt_parses_class_declarations(void) {
 	PASS();
 }
 
+test parse_stmt_parses_data_declarations(void) {
+	struct parser p =
+		test_parser("data List a\n  { Null\n  | Cons a (List a)\n  }");
+	struct stmt *stmt = parse_stmt(&p);
+	EXPECT(p.error_log->had_error == 0);
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEC_DATA);
+	EXPECT(strcmp(stmt->v.dec_data.name, "List") == 0);
+	EXPECT(stmt->v.dec_data.type_vars_len == 1);
+	EXPECT(stmt->v.dec_data.type_vars != NULL);
+	EXPECT(strcmp(stmt->v.dec_data.type_vars[0], "a") == 0);
+	EXPECT(stmt->v.dec_data.constructors_len == 2);
+	EXPECT(stmt->v.dec_data.constructors != NULL);
+	EXPECT(strcmp(stmt->v.dec_data.constructors[0]->name, "Null") == 0);
+	EXPECT(stmt->v.dec_data.constructors[0]->args_len == 0);
+	EXPECT(strcmp(stmt->v.dec_data.constructors[1]->name, "Cons") == 0);
+	EXPECT(stmt->v.dec_data.constructors[1]->args_len == 2);
+	EXPECT(type_node_equals(stmt->v.dec_data.constructors[1]->args[0], "a", 0));
+	EXPECT(
+		type_node_equals(stmt->v.dec_data.constructors[1]->args[1], "List", 1));
+	EXPECT(type_node_equals(
+		stmt->v.dec_data.constructors[1]->args[1]->args[0], "a", 0));
+	PASS();
+}
+
 void test_parser_h(void) {
 	TEST(parse_expr_parses_identifiers);
 	TEST(parse_expr_parses_ints);
@@ -437,4 +462,5 @@ void test_parser_h(void) {
 	TEST(parse_type_parses_type_contexts);
 	TEST(parse_stmt_parses_basic_class_declarations);
 	TEST(parse_stmt_parses_class_declarations);
+	TEST(parse_stmt_parses_data_declarations);
 }

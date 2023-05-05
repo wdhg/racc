@@ -74,6 +74,7 @@ struct dec_type {
 struct dec_constructor {
 	char *name;
 	struct type **args;
+	size_t args_len;
 };
 
 struct def_value {
@@ -102,6 +103,8 @@ struct stmt {
 
 		struct {
 			char *name;
+			char **type_vars;
+			size_t type_vars_len;
 			struct dec_constructor **constructors;
 			size_t constructors_len;
 		} dec_data;

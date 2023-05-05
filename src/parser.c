@@ -77,32 +77,28 @@ static struct token *previous(struct parser *p) {
 	return p->tokens[p->current - 1];
 }
 
-static int
-consume(struct parser *p, enum token_type token_type, char *error_msg) {
-	int result;
-	assert(!is_at_end(p));
-	result = match(p, token_type);
-	if (!result) {
-		struct token *token = peek(p);
-		report_error_at(p->error_log, error_msg, token->lexeme_index);
+#define CONSUME(token_type, error_msg)                                         \
+	{                                                                            \
+		if (!match(p, token_type)) {                                               \
+			struct token *token = peek(p);                                           \
+			report_error_at(p->error_log, error_msg, token->lexeme_index);           \
+			return NULL;                                                             \
+		}                                                                          \
 	}
-	return result;
-}
+
+#define PARSE_IDENTIFIER(var, error_msg)                                       \
+	{                                                                            \
+		struct token *token;                                                       \
+		CONSUME(TOK_IDENTIFIER, error_msg);                                        \
+		token = previous(p);                                                       \
+		var   = copy_text(p, token->lexeme, token->lexeme_len);                    \
+	}
 
 static char *copy_text(struct parser *p, char *text, size_t len) {
 	char *text_copy = arena_push_array_zero(p->arena, len + 1, char);
 	strncpy(text_copy, text, len);
 	text_copy[len] = '\0'; /* ensure null terminator */
 	return text_copy;
-}
-
-static char *parse_identifier(struct parser *p, char *error_msg) {
-	struct token *token;
-	if (!consume(p, TOK_IDENTIFIER, error_msg)) {
-		return NULL;
-	}
-	token = previous(p);
-	return copy_text(p, token->lexeme, token->lexeme_len);
 }
 
 /* ========== EXPRESSIONS ========== */
@@ -153,10 +149,10 @@ static struct expr *parse_expr_primary(struct parser *p) {
 		break;
 	case TOK_PAREN_L: {
 		struct expr *sub_expr = parse_expr(p);
-		if (sub_expr == NULL ||
-		    !consume(p, TOK_PAREN_R, "Expected ')' after expression.")) {
+		if (sub_expr == NULL) {
 			return NULL;
 		}
+		CONSUME(TOK_PAREN_R, "Expected ')' after expression.");
 		expr->type       = EXPR_GROUPING;
 		expr->v.grouping = sub_expr;
 		break;
@@ -316,20 +312,18 @@ static int is_type_primary(enum token_type type) {
 static struct type *parse_type_name(struct parser *p) {
 	struct type *type = arena_push_struct_zero(p->arena, struct type);
 	struct token *token_name;
-	if (!consume(p, TOK_IDENTIFIER, "Expected type identifier")) {
-		return NULL;
-	}
+	CONSUME(TOK_IDENTIFIER, "Expected type identifier");
 	token_name = previous(p);
 	type->name = copy_text(p, token_name->lexeme, token_name->lexeme_len);
 	return type;
 }
 
+static struct type *parse_type_free(struct parser *p);
+
 static struct type *parse_type_primary(struct parser *p) {
 	if (match(p, TOK_PAREN_L)) {
-		struct type *type = parse_type(p);
-		if (!consume(p, TOK_PAREN_R, "Expected ')' after expression.")) {
-			return NULL;
-		}
+		struct type *type = parse_type_free(p);
+		CONSUME(TOK_PAREN_R, "Expected ')' after expression.");
 		return type;
 	}
 
@@ -341,7 +335,11 @@ static struct type *parse_type_parameterized(struct parser *p) {
 		struct type *type = parse_type_name(p);
 		struct list list  = list_new(arena_alloc());
 		while (!is_at_end(p) && is_type_primary(peek(p)->type)) {
-			list_append(&list, parse_type_name(p));
+			struct type *type = parse_type_name(p);
+			if (type == NULL) {
+				return NULL;
+			}
+			list_append(&list, type);
 		}
 		type->args     = (struct type **)list_to_array(&list, p->arena);
 		type->args_len = list_length(&list);
@@ -372,17 +370,12 @@ static struct type *parse_type_arrow(struct parser *p) {
 static struct type_constraint *parse_type_constraint(struct parser *p) {
 	struct type_constraint *constraint;
 	struct list constraint_args;
-	constraint       = arena_push_struct_zero(p->arena, struct type_constraint);
-	constraint_args  = list_new(arena_alloc());
-	constraint->name = parse_identifier(p, "Expected class name");
-	if (constraint->name == NULL) {
-		return NULL;
-	}
+	constraint      = arena_push_struct_zero(p->arena, struct type_constraint);
+	constraint_args = list_new(arena_alloc());
+	PARSE_IDENTIFIER(constraint->name, "Expected class name");
 	while (peek(p)->type == TOK_IDENTIFIER) {
-		char *arg = parse_identifier(p, "Expected type variable");
-		if (arg == NULL) {
-			return NULL;
-		}
+		char *arg;
+		PARSE_IDENTIFIER(arg, "Expected type variable");
 		list_append(&constraint_args, arg);
 	}
 	constraint->args     = (char **)list_to_array(&constraint_args, p->arena);
@@ -396,7 +389,7 @@ struct type_context *parse_type_context(struct parser *p) {
 	struct list constraints;
 	struct type_constraint *constraint;
 	if (!match(p, TOK_SQUARE_L)) {
-		return NULL;
+		return NULL; /* type doesn't have a context */
 	}
 	context     = arena_push_struct_zero(p->arena, struct type_context);
 	constraints = list_new(arena_alloc());
@@ -416,11 +409,13 @@ struct type_context *parse_type_context(struct parser *p) {
 		(struct type_constraint **)list_to_array(&constraints, p->arena);
 	context->constraints_len = list_length(&constraints);
 	arena_free(constraints.arena);
-	if (!consume(p, TOK_SQUARE_R, "Missing closing ']' after type context") ||
-	    !consume(p, TOK_EQ_ARROW, "Expected '=>' after type context")) {
-		return NULL;
-	};
+	CONSUME(TOK_SQUARE_R, "Missing closing ']' after type context");
+	CONSUME(TOK_EQ_ARROW, "Expected '=>' after type context");
 	return context;
+}
+
+static struct type *parse_type_free(struct parser *p) {
+	return parse_type_arrow(p);
 }
 
 struct type *parse_type(struct parser *p) {
@@ -430,7 +425,7 @@ struct type *parse_type(struct parser *p) {
 	if (p->error_log->had_error) {
 		return NULL;
 	}
-	type = parse_type_arrow(p);
+	type = parse_type_free(p);
 	if (type != NULL) {
 		type->context = context;
 	}
@@ -441,31 +436,20 @@ struct type *parse_type(struct parser *p) {
 
 struct dec_type *parse_dec_type(struct parser *p) {
 	struct dec_type *dec_type = arena_push_struct_zero(p->arena, struct dec_type);
-	struct token *token;
-	if (!consume(p, TOK_IDENTIFIER, "Expected identifier")) {
-		return NULL;
-	}
-	token          = previous(p);
-	dec_type->name = copy_text(p, token->lexeme, token->lexeme_len);
-	if (!consume(p, TOK_COLON_COLON, "Expected '::' after identifier")) {
-		return NULL;
-	}
+	PARSE_IDENTIFIER(dec_type->name, "Expected declaration identifier");
+	CONSUME(TOK_COLON_COLON, "Expected '::' after identifier");
 	dec_type->type = parse_type(p);
-	if (!consume(p, TOK_SEMICOLON, "Expected ';' after type")) {
-		return NULL;
-	}
+	CONSUME(TOK_SEMICOLON, "Expected ';' after type");
 	return dec_type;
 }
 
 static struct stmt *parse_stmt_class(struct parser *p) {
-	struct stmt *stmt          = arena_push_struct_zero(p->arena, struct stmt);
-	struct list declarations   = list_new(arena_alloc());
-	stmt->type                 = STMT_DEC_CLASS;
-	stmt->v.dec_class.name     = parse_identifier(p, "Expected class name");
-	stmt->v.dec_class.type_var = parse_identifier(p, "Expected type variable");
-	if (!consume(p, TOK_CURLY_L, "Expected '{' before class declaration")) {
-		return NULL;
-	}
+	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
+	struct list declarations = list_new(arena_alloc());
+	stmt->type               = STMT_DEC_CLASS;
+	PARSE_IDENTIFIER(stmt->v.dec_class.name, "Expected class name");
+	PARSE_IDENTIFIER(stmt->v.dec_class.type_var, "Expected type variable");
+	CONSUME(TOK_CURLY_L, "Expected '{' before class declaration");
 	while (!is_at_end(p) && peek(p)->type == TOK_IDENTIFIER) {
 		struct dec_type *dec_type = parse_dec_type(p);
 		if (dec_type == NULL) {
@@ -477,9 +461,58 @@ static struct stmt *parse_stmt_class(struct parser *p) {
 		(struct dec_type **)list_to_array(&declarations, p->arena);
 	stmt->v.dec_class.declarations_len = list_length(&declarations);
 	arena_free(declarations.arena);
-	if (!consume(p, TOK_CURLY_R, "Expected '}' after class declaration")) {
-		return NULL;
+	CONSUME(TOK_CURLY_R, "Expected '}' after class declaration");
+	return stmt;
+}
+
+static struct dec_constructor *parse_dec_constructor(struct parser *p) {
+	struct dec_constructor *constructor =
+		arena_push_struct_zero(p->arena, struct dec_constructor);
+	struct list args = list_new(arena_alloc());
+	PARSE_IDENTIFIER(constructor->name, "Expected constructor");
+	while (is_type_primary(peek(p)->type)) {
+		struct type *type_arg = parse_type_primary(p);
+		if (type_arg == NULL) {
+			return constructor;
+		}
+		list_append(&args, type_arg);
 	}
+	constructor->args     = (struct type **)list_to_array(&args, p->arena);
+	constructor->args_len = list_length(&args);
+	arena_free(args.arena);
+	return constructor;
+}
+
+static struct stmt *parse_stmt_data(struct parser *p) {
+	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
+	struct list type_vars    = list_new(arena_alloc());
+	struct list constructors = list_new(arena_alloc());
+	stmt->type               = STMT_DEC_DATA;
+	PARSE_IDENTIFIER(stmt->v.dec_data.name, "Expected data identifier");
+	while (peek(p)->type == TOK_IDENTIFIER) {
+		char *type_var;
+		PARSE_IDENTIFIER(type_var, "Expected type variable");
+		list_append(&type_vars, type_var);
+	}
+	stmt->v.dec_data.type_vars     = (char **)list_to_array(&type_vars, p->arena);
+	stmt->v.dec_data.type_vars_len = list_length(&type_vars);
+	arena_free(type_vars.arena);
+	CONSUME(TOK_CURLY_L, "Expected '{' before data declaration");
+	if (match(p, TOK_CURLY_R)) {
+		return stmt;
+	}
+	do {
+		struct dec_constructor *constructor = parse_dec_constructor(p);
+		if (constructor == NULL) {
+			return NULL;
+		}
+		list_append(&constructors, constructor);
+	} while (match(p, TOK_PIPE));
+	stmt->v.dec_data.constructors =
+		(struct dec_constructor **)list_to_array(&constructors, p->arena);
+	stmt->v.dec_data.constructors_len = list_length(&constructors);
+	arena_free(constructors.arena);
+	CONSUME(TOK_CURLY_R, "Expected closing '}' after data declaration");
 	return stmt;
 }
 
@@ -488,6 +521,7 @@ struct stmt *parse_stmt(struct parser *p) {
 
 	switch (token->type) {
 	case TOK_CLASS: return parse_stmt_class(p);
+	case TOK_DATA: return parse_stmt_data(p);
 	default: assert(0);
 	}
 }
