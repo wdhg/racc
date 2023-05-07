@@ -44,8 +44,8 @@ static int match(struct scanner *s, char c) {
 
 /* ========== LEXER ========== */
 
-static void
-scan_token_with_slash_prefix(struct token *token, struct scanner *s) {
+static void scan_token_with_slash_prefix(struct token *token,
+                                         struct scanner *s) {
 	switch (peek(s)) {
 	case '/':
 		advance(s);
@@ -74,8 +74,8 @@ scan_token_with_slash_prefix(struct token *token, struct scanner *s) {
 	}
 }
 
-static void
-scan_token_with_equals_prefix(struct token *token, struct scanner *s) {
+static void scan_token_with_equals_prefix(struct token *token,
+                                          struct scanner *s) {
 	switch (peek(s)) {
 	case '=':
 		advance(s);
@@ -128,7 +128,7 @@ static void scan_token_number(struct token *token, struct scanner *s) {
 }
 
 static void scan_token_identifier(struct token *token, struct scanner *s) {
-	while (isalnum(peek(s))) {
+	while (isalnum(peek(s)) || peek(s) == '_') {
 		advance(s);
 	}
 	token->type = TOK_IDENTIFIER;
@@ -170,7 +170,7 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	default:
 		if (isnumber(c)) {
 			scan_token_number(token, s);
-		} else if (isalpha(c)) {
+		} else if (isalpha(c) || c == '_') {
 			scan_token_identifier(token, s);
 		} else {
 			token->type = TOK_NONE;
