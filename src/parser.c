@@ -443,6 +443,26 @@ struct dec_type *parse_dec_type(struct parser *p) {
 	return dec_type;
 }
 
+struct def_value *parse_def_value(struct parser *p) {
+	struct def_value *def_value =
+		arena_push_struct_zero(p->arena, struct def_value);
+	struct list args = list_new(arena_alloc());
+	PARSE_IDENTIFIER(def_value->name, "Expected definition identifier");
+	while (!match(p, TOK_EQ)) {
+		struct expr *arg = parse_expr_primary(p);
+		if (arg == NULL) {
+			return NULL;
+		}
+		list_append(&args, arg);
+	}
+	def_value->args     = (struct expr **)list_to_array(&args, p->arena);
+	def_value->args_len = list_length(&args);
+	arena_free(args.arena);
+	def_value->value = parse_expr(p);
+	CONSUME(TOK_SEMICOLON, "Expected ';' after expression");
+	return def_value;
+}
+
 static struct stmt *parse_stmt_class(struct parser *p) {
 	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
 	struct list declarations = list_new(arena_alloc());
@@ -518,10 +538,27 @@ static struct stmt *parse_stmt_data(struct parser *p) {
 	return stmt;
 }
 
+static struct stmt *parse_stmt_dec_type(struct parser *p) {
+	struct stmt *stmt = arena_push_struct_zero(p->arena, struct stmt);
+	stmt->type        = STMT_DEC_TYPE;
+	stmt->v.dec_type  = parse_dec_type(p);
+	return stmt;
+}
+
+static struct stmt *parse_stmt_def_value(struct parser *p) {
+	struct stmt *stmt = arena_push_struct_zero(p->arena, struct stmt);
+	stmt->type        = STMT_DEF_VALUE;
+	stmt->v.def_value = parse_def_value(p);
+	return stmt;
+}
+
 struct stmt *parse_stmt(struct parser *p) {
 	switch (peek(p)->type) {
 	case TOK_CLASS: return parse_stmt_class(p);
 	case TOK_DATA: return parse_stmt_data(p);
+	case TOK_IDENTIFIER:
+		return peek_next(p)->type == TOK_COLON_COLON ? parse_stmt_dec_type(p)
+		                                             : parse_stmt_def_value(p);
 	default: assert(0);
 	}
 }

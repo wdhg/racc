@@ -79,6 +79,8 @@ struct dec_constructor {
 
 struct def_value {
 	char *name;
+	struct expr **args;
+	size_t args_len;
 	struct expr *value;
 };
 
@@ -118,7 +120,7 @@ struct stmt {
 			size_t definitions_len;
 		} def_instance;
 
-		struct def_value def_value;
+		struct def_value *def_value;
 	} v;
 };
 

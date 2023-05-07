@@ -436,6 +436,36 @@ test parse_stmt_parses_data_declarations(void) {
 	PASS();
 }
 
+test parse_stmt_parses_type_declaration(void) {
+	struct parser p   = test_parser("myFunc :: Int -> String;");
+	struct stmt *stmt = parse_stmt(&p);
+	struct type *type;
+	EXPECT(p.error_log->had_error == 0);
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEC_TYPE);
+	EXPECT(strcmp(stmt->v.dec_type->name, "myFunc") == 0);
+	type = stmt->v.dec_type->type;
+	EXPECT(type_node_equals(type, "->", 2));
+	EXPECT(type_node_equals(type->args[0], "Int", 0));
+	EXPECT(type_node_equals(type->args[1], "String", 0));
+	PASS();
+}
+
+test parse_stmt_parses_basic_value_definitions(void) {
+	struct parser p   = test_parser("myFunc 0 = \"zero\";");
+	struct stmt *stmt = parse_stmt(&p);
+	EXPECT(p.error_log->had_error == 0);
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEF_VALUE);
+	EXPECT(strcmp(stmt->v.def_value->name, "myFunc") == 0);
+	EXPECT(stmt->v.def_value->args_len == 1);
+	EXPECT(stmt->v.def_value->args[0]->type == EXPR_LIT_INT);
+	EXPECT(stmt->v.def_value->args[0]->v.lit_int == 0);
+	EXPECT(stmt->v.def_value->value->type == EXPR_LIT_STRING);
+	EXPECT(strcmp(stmt->v.def_value->value->v.lit_string, "zero") == 0);
+	PASS();
+}
+
 void test_parser_h(void) {
 	TEST(parse_expr_parses_identifiers);
 	TEST(parse_expr_parses_ints);
@@ -463,4 +493,6 @@ void test_parser_h(void) {
 	TEST(parse_stmt_parses_basic_class_declarations);
 	TEST(parse_stmt_parses_class_declarations);
 	TEST(parse_stmt_parses_data_declarations);
+	TEST(parse_stmt_parses_type_declaration);
+	TEST(parse_stmt_parses_basic_value_definitions);
 }
