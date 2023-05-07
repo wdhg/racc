@@ -434,7 +434,7 @@ struct type *parse_type(struct parser *p) {
 
 /* ========== STATEMENTS ========== */
 
-struct dec_type *parse_dec_type(struct parser *p) {
+static struct dec_type *parse_dec_type(struct parser *p) {
 	struct dec_type *dec_type = arena_push_struct_zero(p->arena, struct dec_type);
 	PARSE_IDENTIFIER(dec_type->name, "Expected declaration identifier");
 	CONSUME(TOK_COLON_COLON, "Expected '::' after identifier");
@@ -443,7 +443,7 @@ struct dec_type *parse_dec_type(struct parser *p) {
 	return dec_type;
 }
 
-struct def_value *parse_def_value(struct parser *p) {
+static struct def_value *parse_def_value(struct parser *p) {
 	struct def_value *def_value =
 		arena_push_struct_zero(p->arena, struct def_value);
 	struct list args = list_new(arena_alloc());
