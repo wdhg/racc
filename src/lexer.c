@@ -199,9 +199,9 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 			token->type = TOK_IN;
 		} else if (strcmp(token->lexeme, "where") == 0) {
 			token->type = TOK_WHERE;
-		} else if (strcmp(token->lexeme, "true") == 0) {
+		} else if (strcmp(token->lexeme, "True") == 0) {
 			token->type = TOK_BOOL;
-		} else if (strcmp(token->lexeme, "false") == 0) {
+		} else if (strcmp(token->lexeme, "False") == 0) {
 			token->type = TOK_BOOL;
 		}
 	}

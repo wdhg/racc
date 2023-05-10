@@ -91,14 +91,18 @@ static struct token *previous(struct parser *p) {
 		struct token *token;                                                       \
 		CONSUME(TOK_IDENTIFIER, error_msg);                                        \
 		token = previous(p);                                                       \
-		var   = copy_text(p, token->lexeme, token->lexeme_len);                    \
+		var   = copy_lexeme(p->arena, token);                                      \
 	}
 
-static char *copy_text(struct parser *p, char *text, size_t len) {
-	char *text_copy = arena_push_array_zero(p->arena, len + 1, char);
+static char *copy_text(struct arena *arena, char *text, size_t len) {
+	char *text_copy = arena_push_array_zero(arena, len + 1, char);
 	strncpy(text_copy, text, len);
 	text_copy[len] = '\0'; /* ensure null terminator */
 	return text_copy;
+}
+
+static char *copy_lexeme(struct arena *arena, struct token *token) {
+	return copy_text(arena, token->lexeme, token->lexeme_len);
 }
 
 /* ========== EXPRESSIONS ========== */
@@ -121,8 +125,9 @@ static struct expr *parse_expr_primary(struct parser *p) {
 	struct expr *expr   = arena_push_struct_zero(p->arena, struct expr);
 	switch (token->type) {
 	case TOK_IDENTIFIER:
-		expr->type         = EXPR_IDENTIFIER;
-		expr->v.identifier = copy_text(p, token->lexeme, token->lexeme_len + 1);
+		expr->type = EXPR_IDENTIFIER;
+		expr->v.identifier =
+			copy_text(p->arena, token->lexeme, token->lexeme_len + 1);
 		break;
 	case TOK_INT:
 		expr->type = EXPR_LIT_INT;
@@ -135,7 +140,7 @@ static struct expr *parse_expr_primary(struct parser *p) {
 	case TOK_STRING: {
 		expr->type = EXPR_LIT_STRING;
 		expr->v.lit_string =
-			copy_text(p, &token->lexeme[1], token->lexeme_len - 2); /* -2 " */
+			copy_text(p->arena, &token->lexeme[1], token->lexeme_len - 2); /* -2 " */
 		break;
 	}
 	case TOK_CHAR:
@@ -145,7 +150,7 @@ static struct expr *parse_expr_primary(struct parser *p) {
 		break;
 	case TOK_BOOL:
 		expr->type       = EXPR_LIT_BOOL;
-		expr->v.lit_bool = strcmp(token->lexeme, "true") == 0;
+		expr->v.lit_bool = strcmp(token->lexeme, "True") == 0;
 		break;
 	case TOK_PAREN_L: {
 		struct expr *sub_expr = parse_expr(p);
@@ -199,10 +204,13 @@ static struct expr *parse_expr_unary(struct parser *p) {
 		if (rhs == NULL) {
 			return NULL;
 		}
-		expr              = arena_push_struct_zero(p->arena, struct expr);
-		expr->type        = EXPR_UNARY;
-		expr->v.unary.op  = op;
-		expr->v.unary.rhs = rhs;
+		expr                   = arena_push_struct_zero(p->arena, struct expr);
+		expr->type             = EXPR_APPLICATION;
+		expr->v.application.fn = copy_lexeme(p->arena, op);
+		expr->v.application.args_len = 1;
+		expr->v.application.args     = arena_push_array_zero(
+      p->arena, expr->v.application.args_len, struct expr *);
+		expr->v.application.args[0] = rhs;
 		return expr;
 	}
 	return parse_expr_application(p);
@@ -220,11 +228,14 @@ static struct expr *parse_expr_factor(struct parser *p) {
 		if (rhs == NULL) {
 			return NULL;
 		}
-		expr               = arena_push_struct_zero(p->arena, struct expr);
-		expr->type         = EXPR_BINARY;
-		expr->v.binary.lhs = lhs;
-		expr->v.binary.op  = op;
-		expr->v.binary.rhs = rhs;
+		expr                   = arena_push_struct_zero(p->arena, struct expr);
+		expr->type             = EXPR_APPLICATION;
+		expr->v.application.fn = copy_lexeme(p->arena, op);
+		expr->v.application.args_len = 2;
+		expr->v.application.args     = arena_push_array_zero(
+      p->arena, expr->v.application.args_len, struct expr *);
+		expr->v.application.args[0] = lhs;
+		expr->v.application.args[1] = rhs;
 	}
 	return expr;
 }
@@ -241,11 +252,14 @@ static struct expr *parse_expr_term(struct parser *p) {
 		if (rhs == NULL) {
 			return NULL;
 		}
-		expr               = arena_push_struct_zero(p->arena, struct expr);
-		expr->type         = EXPR_BINARY;
-		expr->v.binary.lhs = lhs;
-		expr->v.binary.op  = op;
-		expr->v.binary.rhs = rhs;
+		expr                   = arena_push_struct_zero(p->arena, struct expr);
+		expr->type             = EXPR_APPLICATION;
+		expr->v.application.fn = copy_lexeme(p->arena, op);
+		expr->v.application.args_len = 2;
+		expr->v.application.args     = arena_push_array_zero(
+      p->arena, expr->v.application.args_len, struct expr *);
+		expr->v.application.args[0] = lhs;
+		expr->v.application.args[1] = rhs;
 	}
 	return expr;
 }
@@ -263,11 +277,14 @@ static struct expr *parse_expr_comparison(struct parser *p) {
 		if (rhs == NULL) {
 			return NULL;
 		}
-		expr               = arena_push_struct_zero(p->arena, struct expr);
-		expr->type         = EXPR_BINARY;
-		expr->v.binary.lhs = lhs;
-		expr->v.binary.op  = op;
-		expr->v.binary.rhs = rhs;
+		expr                   = arena_push_struct_zero(p->arena, struct expr);
+		expr->type             = EXPR_APPLICATION;
+		expr->v.application.fn = copy_lexeme(p->arena, op);
+		expr->v.application.args_len = 2;
+		expr->v.application.args     = arena_push_array_zero(
+      p->arena, expr->v.application.args_len, struct expr *);
+		expr->v.application.args[0] = lhs;
+		expr->v.application.args[1] = rhs;
 	}
 	return expr;
 }
@@ -284,11 +301,14 @@ static struct expr *parse_expr_equality(struct parser *p) {
 		if (rhs == NULL) {
 			return NULL;
 		}
-		expr               = arena_push_struct_zero(p->arena, struct expr);
-		expr->type         = EXPR_BINARY;
-		expr->v.binary.lhs = lhs;
-		expr->v.binary.op  = op;
-		expr->v.binary.rhs = rhs;
+		expr                   = arena_push_struct_zero(p->arena, struct expr);
+		expr->type             = EXPR_APPLICATION;
+		expr->v.application.fn = copy_lexeme(p->arena, op);
+		expr->v.application.args_len = 2;
+		expr->v.application.args     = arena_push_array_zero(
+      p->arena, expr->v.application.args_len, struct expr *);
+		expr->v.application.args[0] = lhs;
+		expr->v.application.args[1] = rhs;
 	}
 	return expr;
 }
@@ -314,7 +334,7 @@ static struct type *parse_type_name(struct parser *p) {
 	struct token *token_name;
 	CONSUME(TOK_IDENTIFIER, "Expected type identifier");
 	token_name = previous(p);
-	type->name = copy_text(p, token_name->lexeme, token_name->lexeme_len);
+	type->name = copy_lexeme(p->arena, token_name);
 	return type;
 }
 
@@ -467,7 +487,7 @@ static struct stmt *parse_stmt_class(struct parser *p) {
 	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
 	struct list declarations = list_new(arena_alloc());
 	stmt->type               = STMT_DEC_CLASS;
-	CONSUME(TOK_CLASS, "Expected class keyword");
+	CONSUME(TOK_CLASS, "Expected 'class' keyword");
 	PARSE_IDENTIFIER(stmt->v.dec_class.name, "Expected class name");
 	PARSE_IDENTIFIER(stmt->v.dec_class.type_var, "Expected type variable");
 	CONSUME(TOK_CURLY_L, "Expected '{' before class declaration");
@@ -509,7 +529,7 @@ static struct stmt *parse_stmt_data(struct parser *p) {
 	struct list type_vars    = list_new(arena_alloc());
 	struct list constructors = list_new(arena_alloc());
 	stmt->type               = STMT_DEC_DATA;
-	CONSUME(TOK_DATA, "Expected data keyword");
+	CONSUME(TOK_DATA, "Expected 'data' keyword");
 	PARSE_IDENTIFIER(stmt->v.dec_data.name, "Expected data identifier");
 	while (peek(p)->type == TOK_IDENTIFIER) {
 		char *type_var;
@@ -552,13 +572,69 @@ static struct stmt *parse_stmt_def_value(struct parser *p) {
 	return stmt;
 }
 
+static struct stmt *parse_stmt_def_instance(struct parser *p) {
+	struct stmt *stmt = arena_push_struct_zero(p->arena, struct stmt);
+	struct list args  = list_new(arena_alloc());
+	struct list defs  = list_new(arena_alloc());
+	stmt->type        = STMT_DEF_INSTANCE;
+	CONSUME(TOK_INSTANCE, "Expected 'instance' keyword");
+	stmt->v.def_instance.context = parse_type_context(p);
+	PARSE_IDENTIFIER(stmt->v.def_instance.class_name, "Expected class name");
+	do {
+		struct type *arg = parse_type_primary(p);
+		if (arg == NULL) {
+			return NULL;
+		}
+		list_append(&args, arg);
+	} while (!match(p, TOK_CURLY_L));
+	stmt->v.def_instance.args = (struct type **)list_to_array(&args, p->arena);
+	stmt->v.def_instance.args_len = list_length(&args);
+	arena_free(args.arena);
+	do {
+		struct def_value *def = parse_def_value(p);
+		if (def == NULL) {
+			return NULL;
+		}
+		list_append(&defs, def);
+	} while (!match(p, TOK_CURLY_R));
+	stmt->v.def_instance.defs =
+		(struct def_value **)list_to_array(&defs, p->arena);
+	stmt->v.def_instance.defs_len = list_length(&defs);
+	arena_free(defs.arena);
+	return stmt;
+}
+
 struct stmt *parse_stmt(struct parser *p) {
 	switch (peek(p)->type) {
 	case TOK_CLASS: return parse_stmt_class(p);
 	case TOK_DATA: return parse_stmt_data(p);
+	case TOK_INSTANCE: return parse_stmt_def_instance(p);
 	case TOK_IDENTIFIER:
 		return peek_next(p)->type == TOK_COLON_COLON ? parse_stmt_dec_type(p)
 		                                             : parse_stmt_def_value(p);
 	default: assert(0);
 	}
+}
+
+static void advance_to_next_statement(struct parser *p) {
+	while (!match(p, TOK_SEMICOLON) || !match(p, TOK_CURLY_R)) {
+		advance(p);
+	}
+}
+
+struct prog *parse_prog(struct parser *p) {
+	struct prog *prog = arena_push_struct_zero(p->arena, struct prog);
+	struct list stmts = list_new(arena_alloc());
+	while (!match(p, TOK_EOF)) {
+		struct stmt *stmt = parse_stmt(p);
+		if (stmt == NULL) {
+			advance_to_next_statement(p);
+			continue;
+		}
+		list_append(&stmts, stmt);
+	}
+	prog->stmts     = (struct stmt **)list_to_array(&stmts, p->arena);
+	prog->stmts_len = list_length(&stmts);
+	arena_free(stmts.arena);
+	return prog;
 }

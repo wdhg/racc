@@ -68,9 +68,9 @@ test scan_token_scans_escaped_chars(void) {
 	SCAN_TOKEN_HELPER(TOK_CHAR, "\'\\n\'");
 }
 
-test scan_token_scans_true(void) { SCAN_TOKEN_HELPER(TOK_BOOL, "true"); }
+test scan_token_scans_true(void) { SCAN_TOKEN_HELPER(TOK_BOOL, "True"); }
 
-test scan_token_scans_false(void) { SCAN_TOKEN_HELPER(TOK_BOOL, "false"); }
+test scan_token_scans_false(void) { SCAN_TOKEN_HELPER(TOK_BOOL, "False"); }
 
 test scan_token_scans_left_parenthesis(void) {
 	SCAN_TOKEN_HELPER(TOK_PAREN_L, "(");

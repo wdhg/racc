@@ -11,8 +11,6 @@ enum expr_type {
 	EXPR_LIT_STRING,
 	EXPR_LIT_CHAR,
 	EXPR_LIT_BOOL,
-	EXPR_UNARY,
-	EXPR_BINARY,
 	EXPR_GROUPING
 };
 
@@ -33,18 +31,6 @@ struct expr {
 			struct expr **args;
 			size_t args_len;
 		} application;
-
-		struct {
-			struct token *op;
-			struct expr *rhs;
-		} unary;
-
-		struct {
-			struct expr *lhs;
-			struct token *op;
-			struct expr *rhs;
-		} binary;
-
 	} v;
 };
 
@@ -113,15 +99,22 @@ struct stmt {
 
 		struct dec_type *dec_type;
 
+		struct def_value *def_value;
+
 		struct {
 			char *class_name;
-			char **class_args;
-			struct def_value **definitions;
-			size_t definitions_len;
+			struct type_context *context;
+			struct type **args;
+			size_t args_len;
+			struct def_value **defs;
+			size_t defs_len;
 		} def_instance;
-
-		struct def_value *def_value;
 	} v;
+};
+
+struct prog {
+	struct stmt **stmts;
+	size_t stmts_len;
 };
 
 #endif
