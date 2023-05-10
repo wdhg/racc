@@ -112,15 +112,15 @@ static void scan_token_char(struct token *token, struct scanner *s) {
 
 static void scan_token_number(struct token *token, struct scanner *s) {
 	int is_double = 0;
-	while (isnumber(peek(s))) {
+	while (isdigit(peek(s))) {
 		advance(s);
 	}
 	is_double = match(s, '.');
 	if (is_double) {
-		if (!isnumber(peek(s))) {
+		if (!isdigit(peek(s))) {
 			/* TODO error */
 		}
-		while (isnumber(peek(s))) {
+		while (isdigit(peek(s))) {
 			advance(s);
 		}
 	}
@@ -169,7 +169,7 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case ',': token->type = TOK_COMMA; break;
 	case '@': token->type = TOK_AT; break;
 	default:
-		if (isnumber(c)) {
+		if (isdigit(c)) {
 			scan_token_number(token, s);
 		} else if (isalpha(c) || c == '_') {
 			scan_token_identifier(token, s);
