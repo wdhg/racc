@@ -23,7 +23,7 @@ struct parser test_parser(char *source) {
 	p.error_log            = arena_push_struct_zero(p.arena, struct error_log);
 	p.error_log->source    = source;
 	p.error_log->had_error = 0;
-	p.error_log->suppress_error_messages = 0;
+	p.error_log->suppress_error_messages = 1;
 	return p;
 }
 
