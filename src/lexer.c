@@ -167,6 +167,7 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case '[': token->type = TOK_SQUARE_L; break;
 	case ']': token->type = TOK_SQUARE_R; break;
 	case ',': token->type = TOK_COMMA; break;
+	case '@': token->type = TOK_AT; break;
 	default:
 		if (isnumber(c)) {
 			scan_token_number(token, s);
