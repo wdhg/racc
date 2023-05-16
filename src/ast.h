@@ -34,6 +34,12 @@ struct expr {
 	} v;
 };
 
+struct region_sort {
+	char *name;
+	struct region_sort **sub_sorts;
+	size_t sub_sorts_len;
+};
+
 struct type_constraint {
 	char *name;
 	char **args;
@@ -50,6 +56,7 @@ struct type {
 	char *name;
 	struct type **args;
 	size_t args_len;
+	struct region_sort *region_sort;
 };
 
 struct dec_type {
@@ -90,7 +97,7 @@ struct stmt {
 		} dec_class;
 
 		struct {
-			char *name;
+			struct type *name;
 			char **type_vars;
 			size_t type_vars_len;
 			struct dec_constructor **constructors;

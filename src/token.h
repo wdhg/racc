@@ -46,7 +46,8 @@ enum token_type {
 	TOK_SQUARE_L,
 	TOK_SQUARE_R,
 	TOK_COMMA,
-	TOK_AT
+	TOK_AT,
+	TOK_TICK
 };
 
 struct token {

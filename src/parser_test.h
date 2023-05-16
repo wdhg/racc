@@ -15,6 +15,14 @@
 		EXPECT(expected_args_len > 0 || type->args == NULL);                       \
 	}
 
+#define EXPECT_REGION_SORT_EQUALS(sort, expected_name, expected_sub_sorts_len) \
+	{                                                                            \
+		EXPECT(sort != NULL);                                                      \
+		EXPECT(strcmp(sort->name, expected_name) == 0);                            \
+		EXPECT(sort->sub_sorts_len == expected_sub_sorts_len);                     \
+		EXPECT(expected_sub_sorts_len > 0 || sort->sub_sorts == NULL);             \
+	}
+
 struct parser test_parser(char *source) {
 	struct parser p;
 	p.arena                = arena_alloc();
@@ -23,7 +31,7 @@ struct parser test_parser(char *source) {
 	p.error_log            = arena_push_struct_zero(p.arena, struct error_log);
 	p.error_log->source    = source;
 	p.error_log->had_error = 0;
-	p.error_log->suppress_error_messages = 1;
+	p.error_log->suppress_error_messages = 0;
 	return p;
 }
 
@@ -260,6 +268,35 @@ test parse_type_parses_grouped_function_types(void) {
 	PASS();
 }
 
+test parse_type_parses_list_types(void) {
+	struct parser p   = test_parser("(a -> b) -> [a] -> [b]");
+	struct type *type = parse_type(&p);
+	EXPECT_TYPE_NODE_EQUALS(type, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0], "->", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[0], "a", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[1], "b", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1], "->", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0]->args[0], "a", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[0], "b", 0);
+	PASS();
+}
+
+test parse_type_parses_tuple_types(void) {
+	struct parser p   = test_parser("(a, b, c) -> (a, b)");
+	struct type *type = parse_type(&p);
+	EXPECT_TYPE_NODE_EQUALS(type, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0], "(,,)", 3);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[0], "a", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[1], "b", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[2], "c", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1], "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "a", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "b", 0);
+	PASS();
+}
+
 test parse_type_parses_complex_types(void) {
 	struct parser p =
 		test_parser("Either a b -> (b -> Either a c) -> Either a c");
@@ -281,7 +318,7 @@ test parse_type_parses_complex_types(void) {
 }
 
 test parse_type_parses_type_contexts(void) {
-	struct parser p   = test_parser("[Eq a, Functor f] => f a -> f a -> Bool");
+	struct parser p   = test_parser("<Eq a, Functor f> => f a -> f a -> Bool");
 	struct type *type = parse_type(&p);
 	EXPECT(type != NULL);
 	EXPECT(type->context != NULL);
@@ -301,6 +338,24 @@ test parse_type_parses_type_contexts(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "f", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "Bool", 0);
+	PASS();
+}
+
+test parse_type_parses_region_sorts(void) {
+	struct parser p   = test_parser("(a, b) 'R@(r,_) -> a 'r");
+	struct type *type = parse_type(&p);
+	struct region_sort *sort;
+	EXPECT_TYPE_NODE_EQUALS(type, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0], "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[0], "a", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[1], "b", 0);
+	sort = type->args[0]->region_sort;
+	EXPECT_REGION_SORT_EQUALS(sort, "R", 2);
+	EXPECT_REGION_SORT_EQUALS(sort->sub_sorts[0], "r", 0);
+	EXPECT_REGION_SORT_EQUALS(sort->sub_sorts[1], "_", 0);
+	EXPECT_TYPE_NODE_EQUALS(type->args[1], "a", 0);
+	sort = type->args[1]->region_sort;
+	EXPECT_REGION_SORT_EQUALS(sort, "r", 0);
 	PASS();
 }
 
@@ -371,7 +426,9 @@ test parse_stmt_parses_data_declarations(void) {
 	EXPECT(p.error_log->had_error == 0);
 	EXPECT(stmt != NULL);
 	EXPECT(stmt->type == STMT_DEC_DATA);
-	EXPECT(strcmp(stmt->v.dec_data.name, "List") == 0);
+	EXPECT(strcmp(stmt->v.dec_data.name->name, "List") == 0);
+	EXPECT(stmt->v.dec_data.name->args_len == 0);
+	EXPECT(stmt->v.dec_data.name->region_sort == NULL);
 	EXPECT(stmt->v.dec_data.type_vars_len == 1);
 	EXPECT(stmt->v.dec_data.type_vars != NULL);
 	EXPECT(strcmp(stmt->v.dec_data.type_vars[0], "a") == 0);
@@ -419,7 +476,7 @@ test parse_stmt_parses_basic_value_definitions(void) {
 }
 
 test parse_stmt_parses_instance_definitions(void) {
-	struct parser p   = test_parser("instance [Eq a] => Eq (Maybe a) {\n"
+	struct parser p   = test_parser("instance <Eq a> => Eq (Maybe a) {\n"
 	                                "  equal Nothing Nothing = True;\n"
 	                                "  equal (Just a) (Just b) = equal a b;\n"
 	                                "  equal _ _ = False;\n"
@@ -526,8 +583,11 @@ void test_parser_h(void) {
 	TEST(parse_type_parses_parameterized_function_types);
 	TEST(parse_type_parses_multiple_argument_function_types);
 	TEST(parse_type_parses_grouped_function_types);
+	TEST(parse_type_parses_list_types);
+	TEST(parse_type_parses_tuple_types);
 	TEST(parse_type_parses_complex_types);
 	TEST(parse_type_parses_type_contexts);
+	TEST(parse_type_parses_region_sorts);
 	TEST(parse_stmt_parses_basic_class_declarations);
 	TEST(parse_stmt_parses_class_declarations);
 	TEST(parse_stmt_parses_data_declarations);

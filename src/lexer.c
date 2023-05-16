@@ -110,6 +110,15 @@ static void scan_token_char(struct token *token, struct scanner *s) {
 	token->type = TOK_CHAR;
 }
 
+static void scan_token_with_apostrophe_prefix(struct token *token,
+                                              struct scanner *s) {
+	if (get_ch(s, s->current + 1) == '\'' || get_ch(s, s->current + 2) == '\'') {
+		scan_token_char(token, s);
+	} else {
+		token->type = TOK_TICK;
+	}
+}
+
 static void scan_token_number(struct token *token, struct scanner *s) {
 	int is_double = 0;
 	while (isdigit(peek(s))) {
@@ -149,7 +158,7 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	case '\0': token->type = TOK_EOF; break;
 	case '/': scan_token_with_slash_prefix(token, s); break;
 	case '"': scan_token_string(token, s); break;
-	case '\'': scan_token_char(token, s); break;
+	case '\'': scan_token_with_apostrophe_prefix(token, s); break;
 	case '(': token->type = TOK_PAREN_L; break;
 	case ')': token->type = TOK_PAREN_R; break;
 	case '+': token->type = TOK_ADD; break;
