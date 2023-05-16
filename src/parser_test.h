@@ -201,6 +201,33 @@ test parse_expr_parses_grouped_expressions(void) {
 	PASS();
 }
 
+test parse_expr_parses_tuple_expressions(void) {
+	struct parser p   = test_parser("(123, 456 + 789, \"hello\")");
+	struct expr *expr = parse_expr(&p);
+	struct expr *sub_expr;
+	EXPECT(expr->type == EXPR_APPLICATION);
+	EXPECT(strcmp(expr->v.application.fn, "(,,)") == 0);
+	EXPECT(expr->v.application.args_len == 3);
+	sub_expr = expr->v.application.args[0]; /* 123 */
+	EXPECT(sub_expr->type == EXPR_LIT_INT);
+	EXPECT(sub_expr->v.lit_int == 123);
+	sub_expr = expr->v.application.args[1]; /* 456 + 789 */
+	EXPECT(sub_expr->type == EXPR_APPLICATION);
+	EXPECT(strcmp(sub_expr->v.application.fn, "+") == 0);
+	EXPECT(sub_expr->v.application.args_len == 2);
+	sub_expr = expr->v.application.args[1]->v.application.args[0];
+	EXPECT(sub_expr->type == EXPR_LIT_INT);
+	EXPECT(sub_expr->v.lit_int == 456);
+	sub_expr = expr->v.application.args[1]->v.application.args[1];
+	EXPECT(sub_expr->type == EXPR_LIT_INT);
+	EXPECT(sub_expr->v.lit_int == 789);
+	sub_expr = expr->v.application.args[2]; /* "hello" */
+	EXPECT(sub_expr->type == EXPR_LIT_STRING);
+	EXPECT(strcmp(sub_expr->v.lit_string, "hello") == 0);
+	arena_free(p.arena);
+	PASS();
+}
+
 test parse_expr_reports_errors_on_unclosed_subexpressions(void) {
 	struct parser p   = test_parser("(123 + 456 ==");
 	struct expr *expr = parse_expr(&p);
@@ -575,6 +602,7 @@ void test_parser_h(void) {
 	TEST(parse_expr_parses_terms);
 	TEST(parse_expr_parses_comparisons);
 	TEST(parse_expr_parses_equality);
+	TEST(parse_expr_parses_tuple_expressions);
 	TEST(parse_expr_parses_grouped_expressions);
 	TEST(parse_expr_reports_errors_on_unclosed_subexpressions);
 	TEST(parse_type_parses_basic_concrete_types);

@@ -159,13 +159,43 @@ static struct expr *parse_expr_primary(struct parser *p) {
 		expr->v.lit_bool = strcmp(token->lexeme, "True") == 0;
 		break;
 	case TOK_PAREN_L: {
-		struct expr *sub_expr = parse_expr(p);
-		if (sub_expr == NULL) {
-			return NULL;
+		struct list sub_exprs = list_new(arena_alloc());
+		size_t sub_exprs_len;
+
+		do {
+			struct expr *sub_expr = parse_expr(p);
+			if (sub_expr == NULL) {
+				return NULL;
+			}
+			list_append(&sub_exprs, sub_expr);
+		} while (match(p, TOK_COMMA));
+
+		sub_exprs_len = list_length(&sub_exprs);
+
+		if (sub_exprs_len == 0) {
+			assert(0);
+		} else if (sub_exprs_len == 1) {
+			expr->type       = EXPR_GROUPING;
+			expr->v.grouping = list_to_array(&sub_exprs, p->arena)[0];
+		} else {
+			size_t i;
+			size_t fn_len = 2 + sub_exprs_len - 1;
+			expr->type    = EXPR_APPLICATION;
+			expr->v.application.fn =
+				arena_push_array_zero(p->arena, fn_len + 1, char);
+			expr->v.application.fn[0] = '(';
+			for (i = 0; i < sub_exprs_len - 1; i++) {
+				expr->v.application.fn[1 + i] = ',';
+			}
+			expr->v.application.fn[fn_len - 1] = ')';
+			expr->v.application.fn[fn_len]     = '\0';
+			expr->v.application.args =
+				(struct expr **)list_to_array(&sub_exprs, p->arena);
+			expr->v.application.args_len = sub_exprs_len;
 		}
+
 		CONSUME(TOK_PAREN_R, "Expected ')' after expression");
-		expr->type       = EXPR_GROUPING;
-		expr->v.grouping = sub_expr;
+		arena_free(sub_exprs.arena);
 		break;
 	}
 	case TOK_EOF:
