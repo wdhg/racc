@@ -241,6 +241,7 @@ test parse_type_parses_basic_concrete_types(void) {
 	struct parser p   = test_parser("String");
 	struct type *type = parse_type(&p);
 	EXPECT_TYPE_NODE_EQUALS(type, "String", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -249,6 +250,7 @@ test parse_type_parses_parameterized_concrete_types(void) {
 	struct type *type = parse_type(&p);
 	EXPECT_TYPE_NODE_EQUALS(type, "Maybe", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[0], "Int", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -258,6 +260,7 @@ test parse_type_parses_basic_function_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type, "->", 2);
 	EXPECT_TYPE_NODE_EQUALS(type->args[0], "Int", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "String", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -268,6 +271,7 @@ test parse_type_parses_parameterized_function_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[0], "Maybe", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[0]->args[0], "Int", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "Int", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -279,6 +283,7 @@ test parse_type_parses_multiple_argument_function_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "->", 2);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "b", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "c", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -292,6 +297,7 @@ test parse_type_parses_grouped_function_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "->", 2);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "b", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -307,6 +313,7 @@ test parse_type_parses_list_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "[]", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[0], "b", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -321,6 +328,7 @@ test parse_type_parses_tuple_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "(,)", 2);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "b", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -341,6 +349,7 @@ test parse_type_parses_complex_types(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "Either", 2);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[1], "c", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -365,6 +374,7 @@ test parse_type_parses_type_contexts(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0], "f", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "Bool", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -383,6 +393,7 @@ test parse_type_parses_region_sorts(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "a", 0);
 	sort = type->args[1]->region_sort;
 	EXPECT_REGION_SORT_EQUALS(sort, "r", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -407,6 +418,7 @@ test parse_stmt_parses_basic_class_declarations(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[0]->args[0], "a", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1], "f", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[0], "b", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -443,6 +455,7 @@ test parse_stmt_parses_class_declarations(void) {
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[0]->args[0], "b", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[1], "f", 1);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1]->args[1]->args[1]->args[0], "c", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -469,6 +482,7 @@ test parse_stmt_parses_data_declarations(void) {
 	EXPECT_TYPE_NODE_EQUALS(stmt->v.dec_data.constructors[1]->args[1], "List", 1);
 	EXPECT_TYPE_NODE_EQUALS(
 		stmt->v.dec_data.constructors[1]->args[1]->args[0], "a", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -484,6 +498,7 @@ test parse_stmt_parses_type_declaration(void) {
 	EXPECT_TYPE_NODE_EQUALS(type, "->", 2);
 	EXPECT_TYPE_NODE_EQUALS(type->args[0], "Int", 0);
 	EXPECT_TYPE_NODE_EQUALS(type->args[1], "String", 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -499,6 +514,7 @@ test parse_stmt_parses_basic_value_definitions(void) {
 	EXPECT(stmt->v.def_value->args[0]->v.lit_int == 0);
 	EXPECT(stmt->v.def_value->value->type == EXPR_LIT_STRING);
 	EXPECT(strcmp(stmt->v.def_value->value->v.lit_string, "zero") == 0);
+	arena_free(p.arena);
 	PASS();
 }
 
@@ -585,6 +601,7 @@ test parse_stmt_parses_instance_definitions(void) {
 	expr = def->value; /* False */
 	EXPECT(expr->type == EXPR_LIT_BOOL);
 	EXPECT(expr->v.lit_bool == 0);
+	arena_free(p.arena);
 	PASS();
 }
 
