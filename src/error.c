@@ -16,7 +16,7 @@ static int count_digits(int num) {
 
 void report_error(struct error_log *log, char *error_msg) {
 	log->had_error = 1;
-	printf("[ERROR] %s\n", error_msg);
+	printf("ERROR: %s\n", error_msg);
 }
 
 void report_error_at(struct error_log *log, char *error_msg, size_t index) {

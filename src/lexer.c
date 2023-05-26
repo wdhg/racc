@@ -8,12 +8,13 @@
 
 /* ========== SCANNER ========== */
 
-static struct scanner new_scanner(char *source) {
+static struct scanner new_scanner(char *source, struct error_log *log) {
 	struct scanner s;
 	s.source       = source;
 	s.source_len   = strlen(source);
 	s.current      = 0;
 	s.lexeme_start = 0;
+	s.log          = log;
 	return s;
 }
 
@@ -219,23 +220,24 @@ struct token *scan_token(struct scanner *s, struct arena *arena) {
 	return token;
 }
 
-struct token **scan_tokens(char *source, struct arena *arena) {
+struct token **
+scan_tokens(char *source, struct arena *arena, struct error_log *log) {
 	struct token **tokens;
-	struct scanner s       = new_scanner(source);
-	struct list token_list = list_new(arena_alloc());
+	struct scanner s        = new_scanner(source, log);
+	struct list *token_list = list_new(arena_alloc());
 
 	while (1) {
 		struct token *token = scan_token(&s, arena);
 		if (token->type != TOK_NONE) {
-			list_append(&token_list, token);
+			list_append(token_list, token);
 		}
 		if (token->type == TOK_EOF) {
 			break;
 		}
 	}
 
-	tokens = (struct token **)list_to_array(&token_list, arena);
-	arena_free(token_list.arena);
+	tokens = (struct token **)list_to_array(token_list, arena);
+	list_free(token_list);
 
 	return tokens;
 }

@@ -1,3 +1,4 @@
+#include "arena.h"
 #include "lexer.h"
 #include "token.h"
 
@@ -180,9 +181,12 @@ test scan_token_scans_at_symbol(void) { SCAN_TOKEN_HELPER(TOK_AT, "@"); }
 
 test scan_tokens_scans_a_sequence_of_tokens(void) {
 	struct token **tokens;
-	char *source        = "let x = 300 in\ny*x ==600";
-	struct arena *arena = arena_alloc();
-	tokens              = scan_tokens(source, arena);
+	char *source          = "let x = 300 in\ny*x ==600";
+	struct arena *arena   = arena_alloc();
+	struct error_log *log = arena_push_struct_zero(arena, struct error_log);
+	tokens                = scan_tokens(source, arena, log);
+
+	EXPECT(log->had_error == 0);
 
 	EXPECT(tokens[0]->type == TOK_LET);
 	EXPECT(tokens[0]->lexeme_len == 3);

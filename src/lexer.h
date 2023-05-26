@@ -13,10 +13,11 @@ struct scanner {
 	size_t source_len;
 	size_t current;      /* index of current character */
 	size_t lexeme_start; /* index of start of current lexeme */
-	struct error_log log;
+	struct error_log *log;
 };
 
 struct token *scan_token(struct scanner *s, struct arena *arena);
-struct token **scan_tokens(char *source, struct arena *arena);
+struct token **
+scan_tokens(char *source, struct arena *arena, struct error_log *log);
 
 #endif

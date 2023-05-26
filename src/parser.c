@@ -87,7 +87,7 @@ static struct token *previous(struct parser *p) {
 	{                                                                            \
 		if (!match(p, token_type)) {                                               \
 			struct token *token = peek(p);                                           \
-			report_error_at(p->error_log, error_msg, token->lexeme_index);           \
+			report_error_at(p->log, error_msg, token->lexeme_index);                 \
 			return NULL;                                                             \
 		}                                                                          \
 	}
@@ -159,7 +159,7 @@ static struct expr *parse_expr_primary(struct parser *p) {
 		expr->v.lit_bool = strcmp(token->lexeme, "True") == 0;
 		break;
 	case TOK_PAREN_L: {
-		struct list sub_exprs = list_new(arena_alloc());
+		struct list *sub_exprs = list_new(arena_alloc());
 		size_t sub_exprs_len;
 
 		do {
@@ -167,16 +167,16 @@ static struct expr *parse_expr_primary(struct parser *p) {
 			if (sub_expr == NULL) {
 				return NULL;
 			}
-			list_append(&sub_exprs, sub_expr);
+			list_append(sub_exprs, sub_expr);
 		} while (match(p, TOK_COMMA));
 
-		sub_exprs_len = list_length(&sub_exprs);
+		sub_exprs_len = list_length(sub_exprs);
 
 		if (sub_exprs_len == 0) {
 			assert(0);
 		} else if (sub_exprs_len == 1) {
 			expr->type       = EXPR_GROUPING;
-			expr->v.grouping = list_to_array(&sub_exprs, p->arena)[0];
+			expr->v.grouping = list_to_array(sub_exprs, p->arena)[0];
 		} else {
 			size_t i;
 			size_t fn_len = 2 + sub_exprs_len - 1;
@@ -189,21 +189,18 @@ static struct expr *parse_expr_primary(struct parser *p) {
 			}
 			expr->v.application.fn[fn_len - 1] = ')';
 			expr->v.application.fn[fn_len]     = '\0';
-			expr->v.application.args =
-				(struct expr **)list_to_array(&sub_exprs, p->arena);
-			expr->v.application.args_len = sub_exprs_len;
+			expr->v.application.expr_args      = list_copy(sub_exprs, p->arena);
 		}
 
 		CONSUME(TOK_PAREN_R, "Expected ')' after expression");
-		arena_free(sub_exprs.arena);
+		list_free(sub_exprs);
 		break;
 	}
 	case TOK_EOF:
-		report_error_at(
-			p->error_log, "Unexpected end of file", token->lexeme_index);
+		report_error_at(p->log, "Unexpected end of file", token->lexeme_index);
 		return NULL;
 	default:
-		report_error_at(p->error_log, "Unexpected token", token->lexeme_index);
+		report_error_at(p->log, "Unexpected token", token->lexeme_index);
 		return NULL;
 	}
 
@@ -216,16 +213,13 @@ static struct expr *parse_expr_application(struct parser *p) {
 		struct expr *expr      = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
 		expr->v.application.fn = token->lexeme;
-		expr->v.application.args =
-			arena_push_array_zero(p->arena, RACC_MAX_FUNC_ARGS, struct expr *);
-		expr->v.application.args_len = 0;
+		expr->v.application.expr_args = list_new(p->arena);
 		while (is_expr_primary(peek_type(p))) {
 			struct expr *arg = parse_expr_primary(p);
 			if (arg == NULL) {
 				return NULL;
 			}
-			expr->v.application.args[expr->v.application.args_len] = arg;
-			expr->v.application.args_len++;
+			list_append(expr->v.application.expr_args, arg);
 		}
 		return expr;
 	}
@@ -243,10 +237,8 @@ static struct expr *parse_expr_unary(struct parser *p) {
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
-		expr->v.application.args_len = 1;
-		expr->v.application.args     = arena_push_array_zero(
-      p->arena, expr->v.application.args_len, struct expr *);
-		expr->v.application.args[0] = rhs;
+		expr->v.application.expr_args = list_new(p->arena);
+		list_append(expr->v.application.expr_args, rhs);
 		return expr;
 	}
 	return parse_expr_application(p);
@@ -267,11 +259,9 @@ static struct expr *parse_expr_factor(struct parser *p) {
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
-		expr->v.application.args_len = 2;
-		expr->v.application.args     = arena_push_array_zero(
-      p->arena, expr->v.application.args_len, struct expr *);
-		expr->v.application.args[0] = lhs;
-		expr->v.application.args[1] = rhs;
+		expr->v.application.expr_args = list_new(p->arena);
+		list_append(expr->v.application.expr_args, lhs);
+		list_append(expr->v.application.expr_args, rhs);
 	}
 	return expr;
 }
@@ -291,11 +281,9 @@ static struct expr *parse_expr_term(struct parser *p) {
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
-		expr->v.application.args_len = 2;
-		expr->v.application.args     = arena_push_array_zero(
-      p->arena, expr->v.application.args_len, struct expr *);
-		expr->v.application.args[0] = lhs;
-		expr->v.application.args[1] = rhs;
+		expr->v.application.expr_args = list_new(p->arena);
+		list_append(expr->v.application.expr_args, lhs);
+		list_append(expr->v.application.expr_args, rhs);
 	}
 	return expr;
 }
@@ -316,11 +304,9 @@ static struct expr *parse_expr_comparison(struct parser *p) {
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
-		expr->v.application.args_len = 2;
-		expr->v.application.args     = arena_push_array_zero(
-      p->arena, expr->v.application.args_len, struct expr *);
-		expr->v.application.args[0] = lhs;
-		expr->v.application.args[1] = rhs;
+		expr->v.application.expr_args = list_new(p->arena);
+		list_append(expr->v.application.expr_args, lhs);
+		list_append(expr->v.application.expr_args, rhs);
 	}
 	return expr;
 }
@@ -340,18 +326,20 @@ static struct expr *parse_expr_equality(struct parser *p) {
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
 		expr->type             = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
-		expr->v.application.args_len = 2;
-		expr->v.application.args     = arena_push_array_zero(
-      p->arena, expr->v.application.args_len, struct expr *);
-		expr->v.application.args[0] = lhs;
-		expr->v.application.args[1] = rhs;
+		expr->v.application.expr_args = list_new(p->arena);
+		list_append(expr->v.application.expr_args, lhs);
+		list_append(expr->v.application.expr_args, rhs);
 	}
 	return expr;
 }
 
 struct expr *parse_expr(struct parser *p) {
 	struct expr *expr;
-	expr = parse_expr_equality(p);
+	size_t source_index = peek(p)->lexeme_index;
+	expr                = parse_expr_equality(p);
+	if (expr != NULL) {
+		expr->source_index = source_index;
+	}
 	return expr;
 }
 
@@ -360,28 +348,24 @@ struct expr *parse_expr(struct parser *p) {
 static struct type *parse_type_free(struct parser *p);
 
 static struct region_sort *parse_type_region_sort(struct parser *p) {
-	struct region_sort *region_sort =
+	struct region_sort *sort =
 		arena_push_struct_zero(p->arena, struct region_sort);
 
 	if (peek_type(p) == TOK_IDENTIFIER) {
-		PARSE_IDENTIFIER(region_sort->name, "Expected region variable");
+		PARSE_IDENTIFIER(sort->name, "Expected region variable");
 	}
 
 	if (match(p, TOK_AT)) {
-		struct list sub_sorts = list_new(arena_alloc());
+		sort->region_sort_params = list_new(p->arena);
 		CONSUME(TOK_PAREN_L, "Expected opening '(' for region sort");
 		do {
-			struct region_sort *sub_sort = parse_type_region_sort(p);
-			list_append(&sub_sorts, sub_sort);
+			struct region_sort *param = parse_type_region_sort(p);
+			list_append(sort->region_sort_params, param);
 		} while (match(p, TOK_COMMA));
 		CONSUME(TOK_PAREN_R, "Expected closing ')' for region sort");
-		region_sort->sub_sorts =
-			(struct region_sort **)list_to_array(&sub_sorts, p->arena);
-		region_sort->sub_sorts_len = list_length(&sub_sorts);
-		arena_free(sub_sorts.arena);
 	}
 
-	return region_sort;
+	return sort;
 }
 
 static int is_type_primary(enum token_type type) {
@@ -402,7 +386,7 @@ static struct type *parse_type_name(struct parser *p) {
 static struct type *parse_type_primary_bracketed(struct parser *p) {
 	struct type *type;
 	size_t sub_types_len;
-	struct list sub_types = list_new(arena_alloc());
+	struct list *sub_types = list_new(arena_alloc());
 
 	CONSUME(TOK_PAREN_L, "Expected '('");
 
@@ -411,18 +395,17 @@ static struct type *parse_type_primary_bracketed(struct parser *p) {
 		if (sub_type == NULL) {
 			break;
 		}
-		list_append(&sub_types, sub_type);
+		list_append(sub_types, sub_type);
 	} while (match(p, TOK_COMMA));
 
-	sub_types_len = list_length(&sub_types);
+	sub_types_len = list_length(sub_types);
 
 	if (sub_types_len == 0) {
-		type           = arena_push_struct_zero(p->arena, struct type);
-		type->name     = "()";
-		type->args_len = 0;
+		type       = arena_push_struct_zero(p->arena, struct type);
+		type->name = "()";
 	} else if (sub_types_len == 1) {
 		/* grouped type */
-		type = list_to_array(&sub_types, p->arena)[0];
+		type = list_to_array(sub_types, p->arena)[0];
 	} else {
 		/* tuple type */
 		size_t i;
@@ -435,11 +418,10 @@ static struct type *parse_type_primary_bracketed(struct parser *p) {
 		}
 		type->name[name_len - 1] = ')';
 		type->name[name_len]     = '\0';
-		type->args     = (struct type **)list_to_array(&sub_types, p->arena);
-		type->args_len = list_length(&sub_types);
+		type->type_args          = list_copy(sub_types, p->arena);
 	}
 
-	arena_free(sub_types.arena);
+	list_free(sub_types);
 
 	CONSUME(TOK_PAREN_R, "Expected ')' after type");
 
@@ -449,11 +431,10 @@ static struct type *parse_type_primary_bracketed(struct parser *p) {
 static struct type *parse_type_primary_list(struct parser *p) {
 	struct type *type;
 	CONSUME(TOK_SQUARE_L, "Expected '['");
-	type           = arena_push_struct_zero(p->arena, struct type);
-	type->name     = "[]";
-	type->args_len = 1;
-	type->args     = arena_push_array_zero(p->arena, 1, struct type *);
-	type->args[0]  = parse_type_free(p);
+	type            = arena_push_struct_zero(p->arena, struct type);
+	type->name      = "[]";
+	type->type_args = list_new(p->arena);
+	list_append(type->type_args, parse_type_free(p));
 	CONSUME(TOK_SQUARE_R, "Missing closing ']'");
 	return type;
 }
@@ -469,7 +450,6 @@ static struct type *parse_type_primary(struct parser *p) {
 
 static struct type *parse_type_parameterized(struct parser *p) {
 	struct type *type;
-	struct list args;
 	int is_parameterized_type =
 		peek_type(p) == TOK_IDENTIFIER && is_type_primary(peek_type_next(p));
 
@@ -477,20 +457,16 @@ static struct type *parse_type_parameterized(struct parser *p) {
 		return parse_type_primary(p);
 	}
 
-	type = parse_type_name(p);
-	args = list_new(arena_alloc());
+	type            = parse_type_name(p);
+	type->type_args = list_new(p->arena);
 
 	while (is_type_primary(peek_type(p))) {
 		struct type *arg = parse_type_primary(p);
 		if (arg == NULL) {
 			return NULL;
 		}
-		list_append(&args, arg);
+		list_append(type->type_args, arg);
 	}
-
-	type->args     = (struct type **)list_to_array(&args, p->arena);
-	type->args_len = list_length(&args);
-	arena_free(args.arena);
 
 	return type;
 }
@@ -512,60 +488,40 @@ static struct type *parse_type_arrow(struct parser *p) {
 		rhs              = parse_type_arrow(p);
 		type             = arena_push_struct_zero(p->arena, struct type);
 		type->name       = "->";
-		type->args       = arena_push_array_zero(p->arena, 2, struct type *);
-		type->args[0]    = lhs;
-		type->args[1]    = rhs;
-		type->args_len   = 2;
+		type->type_args  = list_new(p->arena);
+		list_append(type->type_args, lhs);
+		list_append(type->type_args, rhs);
 	}
 
 	return type;
 }
 
-static struct type_constraint *parse_type_constraint(struct parser *p) {
-	struct type_constraint *constraint;
-	struct list constraint_args;
-	constraint      = arena_push_struct_zero(p->arena, struct type_constraint);
-	constraint_args = list_new(arena_alloc());
-	PARSE_IDENTIFIER(constraint->name, "Expected class name");
-	while (peek_type(p) == TOK_IDENTIFIER) {
-		char *arg;
-		PARSE_IDENTIFIER(arg, "Expected type variable");
-		list_append(&constraint_args, arg);
-	}
-	constraint->args     = (char **)list_to_array(&constraint_args, p->arena);
-	constraint->args_len = list_length(&constraint_args);
-	arena_free(constraint_args.arena);
-	return constraint;
+static struct type *parse_type_constraint(struct parser *p) {
+	return parse_type_parameterized(p);
 }
 
-struct type_context *parse_type_context(struct parser *p) {
-	struct type_context *context;
-	struct list constraints;
-	struct type_constraint *constraint;
+struct list *parse_type_context(struct parser *p) {
+	struct list *constraints;
+
 	if (!match(p, TOK_LT)) {
 		return NULL; /* type doesn't have a context */
 	}
-	context     = arena_push_struct_zero(p->arena, struct type_context);
-	constraints = list_new(arena_alloc());
-	constraint  = parse_type_constraint(p);
-	if (constraint == NULL) {
-		return NULL;
-	}
-	list_append(&constraints, constraint);
-	while (match(p, TOK_COMMA)) {
-		constraint = parse_type_constraint(p);
+
+	constraints = list_new(p->arena);
+
+	do {
+		struct type *constraint = parse_type_constraint(p);
 		if (constraint == NULL) {
 			return NULL;
 		}
-		list_append(&constraints, constraint);
-	}
-	context->constraints =
-		(struct type_constraint **)list_to_array(&constraints, p->arena);
-	context->constraints_len = list_length(&constraints);
-	arena_free(constraints.arena);
+
+		list_append(constraints, constraint);
+	} while (match(p, TOK_COMMA));
+
 	CONSUME(TOK_GT, "Missing closing '>' after type context");
 	CONSUME(TOK_EQ_ARROW, "Expected '=>' after type context");
-	return context;
+
+	return constraints;
 }
 
 static struct type *parse_type_free(struct parser *p) {
@@ -573,16 +529,19 @@ static struct type *parse_type_free(struct parser *p) {
 }
 
 struct type *parse_type(struct parser *p) {
+	struct list *constraints = parse_type_context(p);
 	struct type *type;
-	struct type_context *context;
-	context = parse_type_context(p);
-	if (p->error_log->had_error) {
+
+	if (p->log->had_error) {
 		return NULL;
 	}
+
 	type = parse_type_free(p);
+
 	if (type != NULL) {
-		type->context = context;
+		type->type_constraints = constraints;
 	}
+
 	return type;
 }
 
@@ -597,157 +556,159 @@ static struct dec_type *parse_dec_type(struct parser *p) {
 	return dec_type;
 }
 
-static struct def_value *parse_def_value(struct parser *p) {
-	struct def_value *def_value =
-		arena_push_struct_zero(p->arena, struct def_value);
-	struct list args = list_new(arena_alloc());
-	PARSE_IDENTIFIER(def_value->name, "Expected definition identifier");
-	while (!match(p, TOK_EQ)) {
-		struct expr *arg = parse_expr_primary(p);
-		if (arg == NULL) {
-			return NULL;
-		}
-		list_append(&args, arg);
-	}
-	def_value->args     = (struct expr **)list_to_array(&args, p->arena);
-	def_value->args_len = list_length(&args);
-	arena_free(args.arena);
-	def_value->value = parse_expr(p);
-	CONSUME(TOK_SEMICOLON, "Expected ';' after expression");
-	return def_value;
-}
+static struct dec_class *parse_dec_class(struct parser *p) {
+	struct dec_class *dec_class =
+		arena_push_struct_zero(p->arena, struct dec_class);
+	dec_class->dec_types = list_new(p->arena);
 
-static struct stmt *parse_stmt_class(struct parser *p) {
-	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
-	struct list declarations = list_new(arena_alloc());
-	stmt->type               = STMT_DEC_CLASS;
 	CONSUME(TOK_CLASS, "Expected 'class' keyword");
-	PARSE_IDENTIFIER(stmt->v.dec_class.name, "Expected class name");
-	PARSE_IDENTIFIER(stmt->v.dec_class.type_var, "Expected type variable");
+	PARSE_IDENTIFIER(dec_class->name, "Expected class name");
+	PARSE_IDENTIFIER(dec_class->type_var, "Expected type variable");
 	CONSUME(TOK_CURLY_L, "Expected '{' before class declaration");
+
 	while (!is_at_end(p) && peek_type(p) == TOK_IDENTIFIER) {
 		struct dec_type *dec_type = parse_dec_type(p);
 		if (dec_type == NULL) {
 			return NULL;
 		}
-		list_append(&declarations, dec_type);
+		list_append(dec_class->dec_types, dec_type);
 	}
-	stmt->v.dec_class.declarations =
-		(struct dec_type **)list_to_array(&declarations, p->arena);
-	stmt->v.dec_class.declarations_len = list_length(&declarations);
-	arena_free(declarations.arena);
+
 	CONSUME(TOK_CURLY_R, "Expected '}' after class declaration");
-	return stmt;
+
+	return dec_class;
 }
 
-static struct dec_constructor *parse_dec_constructor(struct parser *p) {
-	struct dec_constructor *constructor =
-		arena_push_struct_zero(p->arena, struct dec_constructor);
-	struct list args = list_new(arena_alloc());
-	PARSE_IDENTIFIER(constructor->name, "Expected constructor");
-	while (is_type_primary(peek_type(p))) {
-		struct type *type_arg = parse_type_primary(p);
-		if (type_arg == NULL) {
-			return constructor;
-		}
-		list_append(&args, type_arg);
-	}
-	constructor->args     = (struct type **)list_to_array(&args, p->arena);
-	constructor->args_len = list_length(&args);
-	arena_free(args.arena);
-	return constructor;
-}
+static struct def_value *parse_def_value(struct parser *p) {
+	struct def_value *def_value =
+		arena_push_struct_zero(p->arena, struct def_value);
+	def_value->expr_params = list_new(p->arena);
 
-static struct stmt *parse_stmt_data(struct parser *p) {
-	struct stmt *stmt        = arena_push_struct_zero(p->arena, struct stmt);
-	struct list type_vars    = list_new(arena_alloc());
-	struct list constructors = list_new(arena_alloc());
-	stmt->type               = STMT_DEC_DATA;
-	CONSUME(TOK_DATA, "Expected 'data' keyword");
-	stmt->v.dec_data.name = parse_type_name(p);
-	while (peek_type(p) == TOK_IDENTIFIER) {
-		char *type_var;
-		PARSE_IDENTIFIER(type_var, "Expected type variable");
-		list_append(&type_vars, type_var);
-	}
-	stmt->v.dec_data.type_vars     = (char **)list_to_array(&type_vars, p->arena);
-	stmt->v.dec_data.type_vars_len = list_length(&type_vars);
-	arena_free(type_vars.arena);
-	CONSUME(TOK_CURLY_L, "Expected '{' before data declaration");
-	if (match(p, TOK_CURLY_R)) {
-		return stmt;
-	}
-	do {
-		struct dec_constructor *constructor = parse_dec_constructor(p);
-		if (constructor == NULL) {
+	PARSE_IDENTIFIER(def_value->name, "Expected definition identifier");
+
+	while (!match(p, TOK_EQ)) {
+		struct expr *arg = parse_expr_primary(p);
+		if (arg == NULL) {
 			return NULL;
 		}
-		list_append(&constructors, constructor);
-	} while (match(p, TOK_PIPE));
-	stmt->v.dec_data.constructors =
-		(struct dec_constructor **)list_to_array(&constructors, p->arena);
-	stmt->v.dec_data.constructors_len = list_length(&constructors);
-	arena_free(constructors.arena);
-	CONSUME(TOK_CURLY_R, "Expected closing '}' after data declaration");
-	return stmt;
+		list_append(def_value->expr_params, arg);
+	}
+
+	def_value->value = parse_expr(p);
+	CONSUME(TOK_SEMICOLON, "Expected ';' after expression");
+	return def_value;
 }
 
-static struct stmt *parse_stmt_dec_type(struct parser *p) {
-	struct stmt *stmt = arena_push_struct_zero(p->arena, struct stmt);
-	stmt->type        = STMT_DEC_TYPE;
-	stmt->v.dec_type  = parse_dec_type(p);
-	return stmt;
-}
+static struct def_instance *parse_def_instance(struct parser *p) {
+	struct def_instance *def_instance =
+		arena_push_struct_zero(p->arena, struct def_instance);
+	def_instance->type_args  = list_new(p->arena);
+	def_instance->def_values = list_new(p->arena);
 
-static struct stmt *parse_stmt_def_value(struct parser *p) {
-	struct stmt *stmt = arena_push_struct_zero(p->arena, struct stmt);
-	stmt->type        = STMT_DEF_VALUE;
-	stmt->v.def_value = parse_def_value(p);
-	return stmt;
-}
-
-static struct stmt *parse_stmt_def_instance(struct parser *p) {
-	struct stmt *stmt = arena_push_struct_zero(p->arena, struct stmt);
-	struct list args  = list_new(arena_alloc());
-	struct list defs  = list_new(arena_alloc());
-	stmt->type        = STMT_DEF_INSTANCE;
 	CONSUME(TOK_INSTANCE, "Expected 'instance' keyword");
-	stmt->v.def_instance.context = parse_type_context(p);
-	PARSE_IDENTIFIER(stmt->v.def_instance.class_name, "Expected class name");
+	def_instance->type_constraints = parse_type_context(p);
+	PARSE_IDENTIFIER(def_instance->class_name, "Expected class name");
+
 	do {
 		struct type *arg = parse_type_primary(p);
 		if (arg == NULL) {
 			return NULL;
 		}
-		list_append(&args, arg);
+		list_append(def_instance->type_args, arg);
 	} while (!match(p, TOK_CURLY_L));
-	stmt->v.def_instance.args = (struct type **)list_to_array(&args, p->arena);
-	stmt->v.def_instance.args_len = list_length(&args);
-	arena_free(args.arena);
+
 	do {
 		struct def_value *def = parse_def_value(p);
 		if (def == NULL) {
 			return NULL;
 		}
-		list_append(&defs, def);
+		list_append(def_instance->def_values, def);
 	} while (!match(p, TOK_CURLY_R));
-	stmt->v.def_instance.defs =
-		(struct def_value **)list_to_array(&defs, p->arena);
-	stmt->v.def_instance.defs_len = list_length(&defs);
-	arena_free(defs.arena);
-	return stmt;
+
+	return def_instance;
+}
+
+static struct dec_constructor *parse_dec_constructor(struct parser *p) {
+	struct dec_constructor *constructor =
+		arena_push_struct_zero(p->arena, struct dec_constructor);
+	constructor->type_params = list_new(p->arena);
+
+	PARSE_IDENTIFIER(constructor->name, "Expected constructor");
+
+	while (is_type_primary(peek_type(p))) {
+		struct type *type_arg = parse_type_primary(p);
+		if (type_arg == NULL) {
+			return constructor;
+		}
+		list_append(constructor->type_params, type_arg);
+	}
+
+	return constructor;
+}
+
+static struct dec_data *parse_dec_data(struct parser *p) {
+	struct dec_data *dec_data;
+
+	CONSUME(TOK_DATA, "Expected 'data' keyword");
+	dec_data            = arena_push_struct_zero(p->arena, struct dec_data);
+	dec_data->name      = parse_type_name(p);
+	dec_data->type_vars = list_new(p->arena);
+	dec_data->dec_constructors = list_new(p->arena);
+
+	while (peek_type(p) == TOK_IDENTIFIER) {
+		char *type_var;
+		PARSE_IDENTIFIER(type_var, "Expected type variable");
+		list_append(dec_data->type_vars, type_var);
+	}
+
+	CONSUME(TOK_CURLY_L, "Expected '{' before data declaration");
+
+	if (match(p, TOK_CURLY_R)) {
+		return dec_data;
+	}
+
+	do {
+		struct dec_constructor *constructor = parse_dec_constructor(p);
+		if (constructor == NULL) {
+			return NULL;
+		}
+		list_append(dec_data->dec_constructors, constructor);
+	} while (match(p, TOK_PIPE));
+
+	CONSUME(TOK_CURLY_R, "Expected closing '}' after data declaration");
+
+	return dec_data;
 }
 
 struct stmt *parse_stmt(struct parser *p) {
+	struct stmt *stmt  = arena_push_struct_zero(p->arena, struct stmt);
+	stmt->source_index = peek(p)->lexeme_index;
 	switch (peek_type(p)) {
-	case TOK_CLASS: return parse_stmt_class(p);
-	case TOK_DATA: return parse_stmt_data(p);
-	case TOK_INSTANCE: return parse_stmt_def_instance(p);
+	case TOK_CLASS:
+		stmt->type        = STMT_DEC_CLASS;
+		stmt->v.dec_class = parse_dec_class(p);
+		break;
+	case TOK_DATA:
+		stmt->type       = STMT_DEC_DATA;
+		stmt->v.dec_data = parse_dec_data(p);
+		break;
+	case TOK_INSTANCE:
+		stmt->type           = STMT_DEF_INSTANCE;
+		stmt->v.def_instance = parse_def_instance(p);
+		break;
 	case TOK_IDENTIFIER:
-		return peek_type_next(p) == TOK_COLON_COLON ? parse_stmt_dec_type(p)
-		                                            : parse_stmt_def_value(p);
+		if (peek_type_next(p) == TOK_COLON_COLON) {
+			stmt->type       = STMT_DEC_TYPE;
+			stmt->v.dec_type = parse_dec_type(p);
+		} else {
+			stmt->type        = STMT_DEF_VALUE;
+			stmt->v.def_value = parse_def_value(p);
+		}
+		break;
 	default: assert(0);
 	}
+
+	return stmt;
 }
 
 static void advance_to_next_statement(struct parser *p) {
@@ -758,17 +719,27 @@ static void advance_to_next_statement(struct parser *p) {
 
 struct prog *parse_prog(struct parser *p) {
 	struct prog *prog = arena_push_struct_zero(p->arena, struct prog);
-	struct list stmts = list_new(arena_alloc());
+	prog->stmts       = list_new(p->arena);
+
 	while (!match(p, TOK_EOF)) {
 		struct stmt *stmt = parse_stmt(p);
 		if (stmt == NULL) {
 			advance_to_next_statement(p);
 			continue;
 		}
-		list_append(&stmts, stmt);
+		list_append(prog->stmts, stmt);
 	}
-	prog->stmts     = (struct stmt **)list_to_array(&stmts, p->arena);
-	prog->stmts_len = list_length(&stmts);
-	arena_free(stmts.arena);
+
 	return prog;
+}
+
+struct prog *
+parse(struct token **tokens, struct arena *arena, struct error_log *log) {
+	struct parser p;
+	p.tokens  = tokens;
+	p.current = 0;
+	p.arena   = arena;
+	p.log     = log;
+
+	return parse_prog(&p);
 }

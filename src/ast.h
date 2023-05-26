@@ -16,6 +16,7 @@ enum expr_type {
 
 struct expr {
 	enum expr_type type;
+	size_t source_index;
 
 	union {
 		char *identifier;
@@ -28,35 +29,30 @@ struct expr {
 
 		struct {
 			char *fn;
-			struct expr **args;
-			size_t args_len;
+			struct list *expr_args; /* list of struct expr */
 		} application;
 	} v;
 };
 
 struct region_sort {
 	char *name;
-	struct region_sort **sub_sorts;
-	size_t sub_sorts_len;
-};
-
-struct type_constraint {
-	char *name;
-	char **args;
-	size_t args_len;
-};
-
-struct type_context {
-	struct type_constraint **constraints;
-	size_t constraints_len;
+	struct list *region_sort_params; /* list of struct region_sort */
 };
 
 struct type {
-	struct type_context *context;
+	struct list *type_constraints; /* list of struct type */
 	char *name;
-	struct type **args;
-	size_t args_len;
+	struct list *type_args; /* list of struct type */
 	struct region_sort *region_sort;
+};
+
+enum kind_type { KIND_STAR, KIND_ARROW, KIND_CONSTRAINT };
+
+struct kind {
+	enum kind_type type;
+	/* kind arrow */
+	struct kind *lhs;
+	struct kind *rhs;
 };
 
 struct dec_type {
@@ -64,17 +60,34 @@ struct dec_type {
 	struct type *type;
 };
 
+struct dec_class {
+	char *name;
+	char *type_var;
+	struct list *dec_types; /* list of struct dec_type */
+};
+
 struct dec_constructor {
 	char *name;
-	struct type **args;
-	size_t args_len;
+	struct list *type_params; /* list of struct type */
+};
+
+struct dec_data {
+	struct type *name;
+	struct list *type_vars;        /* list of char* */
+	struct list *dec_constructors; /* list of struct dec_constructor */
 };
 
 struct def_value {
 	char *name;
-	struct expr **args;
-	size_t args_len;
+	struct list *expr_params; /* list of struct expr */
 	struct expr *value;
+};
+
+struct def_instance {
+	char *class_name;
+	struct list *type_constraints; /* list of struct type */
+	struct list *type_args;        /* list of struct type */
+	struct list *def_values;       /* list of struct def_value */
 };
 
 enum stmt_type {
@@ -87,41 +100,19 @@ enum stmt_type {
 
 struct stmt {
 	enum stmt_type type;
+	size_t source_index;
 
 	union {
-		struct {
-			char *name;
-			char *type_var;
-			struct dec_type **declarations;
-			size_t declarations_len;
-		} dec_class;
-
-		struct {
-			struct type *name;
-			char **type_vars;
-			size_t type_vars_len;
-			struct dec_constructor **constructors;
-			size_t constructors_len;
-		} dec_data;
-
+		struct dec_class *dec_class;
+		struct dec_data *dec_data;
 		struct dec_type *dec_type;
-
 		struct def_value *def_value;
-
-		struct {
-			char *class_name;
-			struct type_context *context;
-			struct type **args;
-			size_t args_len;
-			struct def_value **defs;
-			size_t defs_len;
-		} def_instance;
+		struct def_instance *def_instance;
 	} v;
 };
 
 struct prog {
-	struct stmt **stmts;
-	size_t stmts_len;
+	struct list *stmts; /* list of struct stmt */
 };
 
 #endif
