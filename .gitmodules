@@ -4,3 +4,6 @@
 [submodule "lib/arena"]
 	path = lib/arena
 	url = git@github.com:wdhg/arena.git
+[submodule "lib/fixint"]
+	path = lib/fixint
+	url = git@github.com:wdhg/fixint.git
