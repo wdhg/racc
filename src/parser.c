@@ -129,33 +129,34 @@ static int is_expr_primary(enum token_type token_type) {
 static struct expr *parse_expr_primary(struct parser *p) {
 	struct token *token = advance(p);
 	struct expr *expr   = arena_push_struct_zero(p->arena, struct expr);
+	expr->source_index  = token->lexeme_index;
 	switch (token->type) {
 	case TOK_IDENTIFIER:
-		expr->type = EXPR_IDENTIFIER;
+		expr->expr_type = EXPR_IDENTIFIER;
 		expr->v.identifier =
 			copy_text(p->arena, token->lexeme, token->lexeme_len + 1);
 		break;
 	case TOK_INT:
-		expr->type = EXPR_LIT_INT;
+		expr->expr_type = EXPR_LIT_INT;
 		sscanf(token->lexeme, "%d", &expr->v.lit_int);
 		break;
 	case TOK_DOUBLE:
-		expr->type = EXPR_LIT_DOUBLE;
+		expr->expr_type = EXPR_LIT_DOUBLE;
 		sscanf(token->lexeme, "%lf", &expr->v.lit_double);
 		break;
 	case TOK_STRING: {
-		expr->type = EXPR_LIT_STRING;
+		expr->expr_type = EXPR_LIT_STRING;
 		expr->v.lit_string =
 			copy_text(p->arena, &token->lexeme[1], token->lexeme_len - 2); /* -2 " */
 		break;
 	}
 	case TOK_CHAR:
-		expr->type = EXPR_LIT_CHAR;
+		expr->expr_type = EXPR_LIT_CHAR;
 		/* TODO escaped characters */
 		sscanf(token->lexeme, "'%c'", &expr->v.lit_char);
 		break;
 	case TOK_BOOL:
-		expr->type       = EXPR_LIT_BOOL;
+		expr->expr_type  = EXPR_LIT_BOOL;
 		expr->v.lit_bool = strcmp(token->lexeme, "True") == 0;
 		break;
 	case TOK_PAREN_L: {
@@ -175,12 +176,12 @@ static struct expr *parse_expr_primary(struct parser *p) {
 		if (sub_exprs_len == 0) {
 			assert(0);
 		} else if (sub_exprs_len == 1) {
-			expr->type       = EXPR_GROUPING;
+			expr->expr_type  = EXPR_GROUPING;
 			expr->v.grouping = list_to_array(sub_exprs, p->arena)[0];
 		} else {
 			size_t i;
-			size_t fn_len = 2 + sub_exprs_len - 1;
-			expr->type    = EXPR_APPLICATION;
+			size_t fn_len   = 2 + sub_exprs_len - 1;
+			expr->expr_type = EXPR_APPLICATION;
 			expr->v.application.fn =
 				arena_push_array_zero(p->arena, fn_len + 1, char);
 			expr->v.application.fn[0] = '(';
@@ -193,6 +194,43 @@ static struct expr *parse_expr_primary(struct parser *p) {
 		}
 
 		CONSUME(TOK_PAREN_R, "Expected ')' after expression");
+		list_free(sub_exprs);
+		break;
+	}
+	case TOK_SQUARE_L: {
+		struct list *sub_exprs;
+		struct list_iter sub_exprs_iter;
+
+		expr->expr_type = EXPR_LIST_NULL;
+
+		if (match(p, TOK_SQUARE_R)) {
+			break;
+		}
+
+		sub_exprs = list_new(arena_alloc());
+
+		do {
+			struct expr *sub_expr = parse_expr(p);
+			if (sub_expr == NULL) {
+				return NULL;
+			}
+			list_append(sub_exprs, sub_expr);
+		} while (match(p, TOK_COMMA));
+
+		sub_exprs_iter = list_iterate_reverse(sub_exprs);
+
+		while (!list_iter_at_end(&sub_exprs_iter)) {
+			struct expr *sub_expr  = list_iter_next(&sub_exprs_iter);
+			struct expr *cons_expr = arena_push_struct_zero(p->arena, struct expr);
+			cons_expr->expr_type   = EXPR_APPLICATION;
+			cons_expr->v.application.fn        = ":";
+			cons_expr->v.application.expr_args = list_new(p->arena);
+			list_append(cons_expr->v.application.expr_args, sub_expr);
+			list_append(cons_expr->v.application.expr_args, expr);
+			expr = cons_expr;
+		}
+
+		CONSUME(TOK_SQUARE_R, "Expected ']' after expression");
 		list_free(sub_exprs);
 		break;
 	}
@@ -211,7 +249,7 @@ static struct expr *parse_expr_application(struct parser *p) {
 	if (peek_type(p) == TOK_IDENTIFIER && is_expr_primary(peek_type_next(p))) {
 		struct token *token    = advance(p);
 		struct expr *expr      = arena_push_struct_zero(p->arena, struct expr);
-		expr->type             = EXPR_APPLICATION;
+		expr->expr_type        = EXPR_APPLICATION;
 		expr->v.application.fn = token->lexeme;
 		expr->v.application.expr_args = list_new(p->arena);
 		while (is_expr_primary(peek_type(p))) {
@@ -235,7 +273,7 @@ static struct expr *parse_expr_unary(struct parser *p) {
 			return NULL;
 		}
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
-		expr->type             = EXPR_APPLICATION;
+		expr->expr_type        = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
 		expr->v.application.expr_args = list_new(p->arena);
 		list_append(expr->v.application.expr_args, rhs);
@@ -257,7 +295,7 @@ static struct expr *parse_expr_factor(struct parser *p) {
 			return NULL;
 		}
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
-		expr->type             = EXPR_APPLICATION;
+		expr->expr_type        = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
 		expr->v.application.expr_args = list_new(p->arena);
 		list_append(expr->v.application.expr_args, lhs);
@@ -279,7 +317,7 @@ static struct expr *parse_expr_term(struct parser *p) {
 			return NULL;
 		}
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
-		expr->type             = EXPR_APPLICATION;
+		expr->expr_type        = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
 		expr->v.application.expr_args = list_new(p->arena);
 		list_append(expr->v.application.expr_args, lhs);
@@ -288,8 +326,29 @@ static struct expr *parse_expr_term(struct parser *p) {
 	return expr;
 }
 
-static struct expr *parse_expr_comparison(struct parser *p) {
+static struct expr *parse_expr_cons_list(struct parser *p) {
 	struct expr *expr = parse_expr_term(p);
+	if (expr == NULL) {
+		return NULL;
+	}
+	while (match(p, TOK_COLON)) {
+		struct expr *lhs = expr;
+		struct expr *rhs = parse_expr_cons_list(p);
+		if (rhs == NULL) {
+			return NULL;
+		}
+		expr                   = arena_push_struct_zero(p->arena, struct expr);
+		expr->expr_type        = EXPR_APPLICATION;
+		expr->v.application.fn = ":";
+		expr->v.application.expr_args = list_new(p->arena);
+		list_append(expr->v.application.expr_args, lhs);
+		list_append(expr->v.application.expr_args, rhs);
+	}
+	return expr;
+}
+
+static struct expr *parse_expr_comparison(struct parser *p) {
+	struct expr *expr = parse_expr_cons_list(p);
 	if (expr == NULL) {
 		return NULL;
 	}
@@ -302,7 +361,7 @@ static struct expr *parse_expr_comparison(struct parser *p) {
 			return NULL;
 		}
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
-		expr->type             = EXPR_APPLICATION;
+		expr->expr_type        = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
 		expr->v.application.expr_args = list_new(p->arena);
 		list_append(expr->v.application.expr_args, lhs);
@@ -324,7 +383,7 @@ static struct expr *parse_expr_equality(struct parser *p) {
 			return NULL;
 		}
 		expr                   = arena_push_struct_zero(p->arena, struct expr);
-		expr->type             = EXPR_APPLICATION;
+		expr->expr_type        = EXPR_APPLICATION;
 		expr->v.application.fn = copy_lexeme(p->arena, op);
 		expr->v.application.expr_args = list_new(p->arena);
 		list_append(expr->v.application.expr_args, lhs);
@@ -525,7 +584,8 @@ struct list *parse_type_context(struct parser *p) {
 }
 
 static struct type *parse_type_free(struct parser *p) {
-	return parse_type_arrow(p);
+	struct type *type = parse_type_arrow(p);
+	return type;
 }
 
 struct type *parse_type(struct parser *p) {
@@ -650,9 +710,12 @@ static struct dec_data *parse_dec_data(struct parser *p) {
 	struct dec_data *dec_data;
 
 	CONSUME(TOK_DATA, "Expected 'data' keyword");
-	dec_data            = arena_push_struct_zero(p->arena, struct dec_data);
-	dec_data->name      = parse_type_name(p);
-	dec_data->type_vars = list_new(p->arena);
+	dec_data = arena_push_struct_zero(p->arena, struct dec_data);
+	PARSE_IDENTIFIER(dec_data->name, "Expected data type name");
+	if (match(p, TOK_TICK)) {
+		dec_data->region_sort = parse_type_region_sort(p);
+	}
+	dec_data->type_vars        = list_new(p->arena);
 	dec_data->dec_constructors = list_new(p->arena);
 
 	while (peek_type(p) == TOK_IDENTIFIER) {

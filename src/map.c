@@ -19,10 +19,10 @@ struct map_list_elem {
 };
 
 /* FNV-1 hash function */
-static u64 hash(char *key) {
+static u64 hash(u8 *key, size_t key_len) {
 	u64 h = 0xcbf29ce484222325;
 	size_t i;
-	for (i = 0; key[i] != '\0'; i++) {
+	for (i = 0; i < key_len; i++) {
 		h *= 0x100000001b3;
 		h ^= (u64)key[i];
 	}
@@ -30,7 +30,7 @@ static u64 hash(char *key) {
 }
 
 static struct list *get_bucket(struct map *map, u64 hash) {
-	u64 mask     = (1 << (map->buckets_bit + 1)) - 1;
+	u64 mask     = (1 << map->buckets_bit) - 1;
 	size_t index = (size_t)(hash & mask);
 	if (map->buckets[index] == NULL) {
 		map->buckets[index] = list_new(NULL);
@@ -75,8 +75,8 @@ void map_free(struct map *map) {
 	free(map);
 }
 
-void map_put(struct map *map, char *key, void *value) {
-	size_t key_hash = hash(key);
+void map_put(struct map *map, u8 *key, size_t key_len, void *value) {
+	size_t key_hash = hash(key, key_len);
 	struct list *bucket;
 	struct list_iter iter;
 	struct map_list_elem *new_elem;
@@ -103,8 +103,16 @@ void map_put(struct map *map, char *key, void *value) {
 	list_append(bucket, new_elem);
 }
 
-void *map_pop(struct map *map, char *key) {
-	u64 key_hash          = hash(key);
+void map_put_str(struct map *map, char *key, void *value) {
+	map_put(map, (u8 *)key, strlen(key), value);
+}
+
+void map_put_u64(struct map *map, u64 key, void *value) {
+	map_put(map, (u8 *)&key, sizeof(u64) / sizeof(u8), value);
+}
+
+void *map_pop(struct map *map, u8 *key, size_t key_len) {
+	u64 key_hash          = hash(key, key_len);
 	struct list *bucket   = get_bucket(map, key_hash);
 	struct list_iter iter = list_iterate(bucket);
 
@@ -116,8 +124,16 @@ void *map_pop(struct map *map, char *key) {
 	return NULL;
 }
 
-void *map_get(struct map *map, char *key) {
-	u64 key_hash          = hash(key);
+void *map_pop_str(struct map *map, char *key) {
+	return map_pop(map, (u8 *)key, strlen(key));
+}
+
+void *map_pop_u64(struct map *map, u64 key) {
+	return map_pop(map, (u8 *)&key, sizeof(u64) / sizeof(u8));
+}
+
+void *map_get(struct map *map, u8 *key, size_t key_len) {
+	u64 key_hash          = hash(key, key_len);
 	struct list *bucket   = get_bucket(map, key_hash);
 	struct list_iter iter = list_iterate(bucket);
 
@@ -127,4 +143,12 @@ void *map_get(struct map *map, char *key) {
 	}
 
 	return NULL;
+}
+
+void *map_get_str(struct map *map, char *key) {
+	return map_get(map, (u8 *)key, strlen(key));
+}
+
+void *map_get_u64(struct map *map, u64 key) {
+	return map_get(map, (u8 *)&key, sizeof(u64) / sizeof(u8));
 }

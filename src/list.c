@@ -78,6 +78,20 @@ void **list_to_array(struct list *list, struct arena *arena) {
 	return array;
 }
 
+void *list_head(struct list *list) {
+	if (list->head == NULL) {
+		return NULL;
+	}
+	return list->head->v;
+}
+
+void *list_last(struct list *list) {
+	if (list->last == NULL) {
+		return NULL;
+	}
+	return list->last->v;
+}
+
 void *list_get(struct list *list, size_t i) {
 	struct list_iter iter = list_iterate(list);
 
