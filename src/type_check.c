@@ -752,7 +752,6 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 	type_context_enter(tc);
 	type_scope_enter(tc);
 
-	{
 #define TYPE_VAR_A (new_type(tc, "a", &kind_star))
 #define TYPE_VAR_B (new_type(tc, "b", &kind_star))
 #define TYPE_LIST  (new_type(tc, "[]", &kind_unary))
@@ -775,21 +774,20 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 #define TYPE_CONSTRUCTOR_TUPLE                                                 \
 	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_B, TYPE_TUPLE_A_B)
 
-		register_type(tc, &type_int);
-		register_type(tc, &type_double);
-		register_type(tc, &type_char);
-		register_type(tc, &type_bool);
-		register_type_synonym(tc, "String", TYPE_STRING);
-		register_type(tc, TYPE_ARROW);
-		register_type(tc, TYPE_TUPLE);
-		register_type(tc, TYPE_LIST);
+	register_type(tc, &type_int);
+	register_type(tc, &type_double);
+	register_type(tc, &type_char);
+	register_type(tc, &type_bool);
+	register_type_synonym(tc, "String", TYPE_STRING);
+	register_type(tc, TYPE_ARROW);
+	register_type(tc, TYPE_TUPLE);
+	register_type(tc, TYPE_LIST);
 
-		set_value_type(tc, "==", TYPE_EQ);
+	set_value_type(tc, "==", TYPE_EQ);
 
-		set_value_type(tc, "[]", TYPE_LIST_A);
-		set_value_type(tc, ":", TYPE_CONSTRUCTOR_CONS);
-		set_value_type(tc, "(,)", TYPE_CONSTRUCTOR_TUPLE);
-	}
+	set_value_type(tc, "[]", TYPE_LIST_A);
+	set_value_type(tc, ":", TYPE_CONSTRUCTOR_CONS);
+	set_value_type(tc, "(,)", TYPE_CONSTRUCTOR_TUPLE);
 
 	type_check_prog(tc, prog);
 
