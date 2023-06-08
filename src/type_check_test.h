@@ -143,6 +143,14 @@ TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_use_of_literal_strings,
                        "myFunc :: Int;\n"
                        "myFunc = \"hello\";")
 
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_nested_generic_uses_of_equal,
+                       "myFunc :: Int -> Int -> Bool;\n"
+                       "myFunc x y = (x == y) == False;")
+
+TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_nested_generic_uses_of_equal,
+                       "myFunc :: Int -> Int -> Bool;\n"
+                       "myFunc x y = (x == y) == 3;")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -173,4 +181,6 @@ void test_type_check_h(void) {
 	TEST(type_check_rejects_invalid_use_of_string_type);
 	TEST(type_check_accepts_valid_use_of_literal_strings);
 	TEST(type_check_rejects_invalid_use_of_literal_strings);
+	TEST(type_check_accepts_valid_nested_generic_uses_of_equal);
+	TEST(type_check_rejects_invalid_nested_generic_uses_of_equal);
 }

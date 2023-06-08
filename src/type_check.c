@@ -548,7 +548,7 @@ static struct type *get_expr_type(struct type_checker *tc, struct expr *expr) {
 	case EXPR_LIT_STRING: expr->type = get_type_synonym(tc, "String"); break;
 	case EXPR_LIT_CHAR: expr->type = &type_char; break;
 	case EXPR_LIT_BOOL: expr->type = &type_bool; break;
-	case EXPR_GROUPING: expr->type = get_expr_type(tc, expr); break;
+	case EXPR_GROUPING: expr->type = get_expr_type(tc, expr->v.grouping); break;
 	case EXPR_LIST_NULL:
 		expr->type = substitute_type(tc, get_value_type(tc, "[]"));
 		break;
@@ -768,11 +768,12 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 #define APPLY_A_ARROW_B_ARROW_C(A, B, C)                                       \
 	APPLY_A_ARROW_B(A, APPLY_A_ARROW_B(B, C))
 
+#define TYPE_EQ APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_A, &type_bool)
+
 #define TYPE_CONSTRUCTOR_CONS                                                  \
 	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_LIST_A, TYPE_LIST_A)
 #define TYPE_CONSTRUCTOR_TUPLE                                                 \
 	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_B, TYPE_TUPLE_A_B)
-#define TYPE_EQ APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_A, &type_bool)
 
 		register_type(tc, &type_int);
 		register_type(tc, &type_double);
@@ -783,10 +784,11 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 		register_type(tc, TYPE_TUPLE);
 		register_type(tc, TYPE_LIST);
 
+		set_value_type(tc, "==", TYPE_EQ);
+
 		set_value_type(tc, "[]", TYPE_LIST_A);
 		set_value_type(tc, ":", TYPE_CONSTRUCTOR_CONS);
 		set_value_type(tc, "(,)", TYPE_CONSTRUCTOR_TUPLE);
-		set_value_type(tc, "==", TYPE_EQ);
 	}
 
 	type_check_prog(tc, prog);
