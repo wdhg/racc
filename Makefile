@@ -13,6 +13,7 @@ EXE_TEST  = $(DIR_BIN)/racc_test
 C_FLAGS  = -Wall -Wextra -pedantic -std=c89
 C_FLAGS += -I$(DIR_LIB)/ctest/include
 C_FLAGS += -I$(DIR_LIB)/arena/include
+C_FLAGS += -I$(DIR_LIB)/fixint/include
 
 MAIN_C = $(DIR_SRC)/main.c
 TEST_C = $(DIR_SRC)/test.c
