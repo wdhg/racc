@@ -135,6 +135,14 @@ TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_use_of_string_type,
                        "myFunc :: String -> Int;\n"
                        "myFunc (x:_) = x;")
 
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_use_of_literal_strings,
+                       "myFunc :: String;\n"
+                       "myFunc = \"hello\";")
+
+TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_use_of_literal_strings,
+                       "myFunc :: Int;\n"
+                       "myFunc = \"hello\";")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -163,4 +171,6 @@ void test_type_check_h(void) {
 	TEST(type_check_rejects_invalid_empty_list_patterns);
 	TEST(type_check_accepts_valid_use_of_string_type);
 	TEST(type_check_rejects_invalid_use_of_string_type);
+	TEST(type_check_accepts_valid_use_of_literal_strings);
+	TEST(type_check_rejects_invalid_use_of_literal_strings);
 }

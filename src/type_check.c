@@ -545,7 +545,7 @@ static struct type *get_expr_type(struct type_checker *tc, struct expr *expr) {
 	}
 	case EXPR_LIT_INT: expr->type = &type_int; break;
 	case EXPR_LIT_DOUBLE: expr->type = &type_double; break;
-	case EXPR_LIT_STRING: break; /* TODO */
+	case EXPR_LIT_STRING: expr->type = get_type_synonym(tc, "String"); break;
 	case EXPR_LIT_CHAR: expr->type = &type_char; break;
 	case EXPR_LIT_BOOL: expr->type = &type_bool; break;
 	case EXPR_GROUPING: expr->type = get_expr_type(tc, expr); break;
@@ -646,7 +646,10 @@ static void bind_expr_param_to_type(struct type_checker *tc,
 	case EXPR_LIT_DOUBLE:
 		check_types_equal(tc, type, &type_double, expr->source_index);
 		break;
-	case EXPR_LIT_STRING: break; /* TODO */
+	case EXPR_LIT_STRING:
+		check_types_equal(
+			tc, type, get_type_synonym(tc, "String"), expr->source_index);
+		break;
 	case EXPR_LIT_CHAR:
 		check_types_equal(tc, type, &type_char, expr->source_index);
 		break;
