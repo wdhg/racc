@@ -4,7 +4,6 @@
 #include "error.h"
 #include "list.h"
 #include "map.h"
-#include "set.h"
 #include "uid.h"
 #include <assert.h>
 #include <ctype.h>
