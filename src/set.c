@@ -1,5 +1,6 @@
 #include "set.h"
 
+#include "fixint.h"
 #include <stdlib.h>
 
 struct set {
@@ -17,12 +18,14 @@ void set_free(struct set *set) {
 	free(set);
 }
 
-void set_put(struct set *set, char *key) {
-	map_put(set->map, key, (void *)0x1);
+void set_put(struct set *set, u8 *key, size_t key_len) {
+	map_put(set->map, key, key_len, (void *)0x1);
 }
 
-void set_pop(struct set *set, char *key) { map_pop(set->map, key); }
+void set_pop(struct set *set, u8 *key, size_t key_len) {
+	map_pop(set->map, key, key_len);
+}
 
-int set_has(struct set *set, char *key) {
-	return map_get(set->map, key) != NULL;
+int set_has(struct set *set, u8 *key, size_t key_len) {
+	return map_get(set->map, key, key_len) != NULL;
 }
