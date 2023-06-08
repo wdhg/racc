@@ -2,7 +2,7 @@
 #define RACC_HASH_H
 
 #include "fixint.h"
-#include <ctype.h>
+#include <stddef.h>
 
 struct md5_hash {
 	u64 lo;
