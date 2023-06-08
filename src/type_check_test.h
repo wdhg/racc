@@ -108,6 +108,33 @@ TYPE_CHECK_TEST_REJECT(
 	"[[Char]]);\n"
 	"myFunc ((((x,_):_),(_,y)):_) = (x,y);")
 
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_generic_uses_of_equal,
+                       "myFunc :: Int -> Int -> Bool;\n"
+                       "myFunc x y = x == y;")
+
+TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_generic_uses_of_equal,
+                       "myFunc :: Int -> Char -> Bool;\n"
+                       "myFunc x y = x == y;")
+
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_empty_list_patterns,
+                       "myFunc :: [Int] -> Int;\n"
+                       "myFunc (x:_) = x;\n"
+                       "myFunc [] = 0;")
+
+TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_empty_list_patterns,
+                       "myFunc :: Int -> Int;\n"
+                       "myFunc x = x;\n"
+                       "myFunc [] = 0;")
+
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_use_of_string_type,
+                       "myFunc :: String -> Char;\n"
+                       "myFunc \"\" = ' ';\n"
+                       "myFunc (x:_) = x;")
+
+TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_use_of_string_type,
+                       "myFunc :: String -> Int;\n"
+                       "myFunc (x:_) = x;")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -130,4 +157,10 @@ void test_type_check_h(void) {
 		type_check_accepts_valid_complex_nested_data_structures_in_definitions_2);
 	TEST(
 		type_check_rejects_invalid_complex_nested_data_structures_in_definitions_2);
+	TEST(type_check_accepts_valid_generic_uses_of_equal);
+	TEST(type_check_rejects_invalid_generic_uses_of_equal);
+	TEST(type_check_accepts_valid_empty_list_patterns);
+	TEST(type_check_rejects_invalid_empty_list_patterns);
+	TEST(type_check_accepts_valid_use_of_string_type);
+	TEST(type_check_rejects_invalid_use_of_string_type);
 }

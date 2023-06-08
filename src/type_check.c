@@ -15,6 +15,7 @@
 #undef DEBUG
 
 struct type_checker {
+	struct map *type_synonyms;  /* char* -> struct type* */
 	struct list *type_scopes;   /* list of char* -> struct type* */
 	struct list *type_contexts; /* list of char* -> struct type* */
 
@@ -107,6 +108,7 @@ static void type_scope_enter(struct type_checker *tc);
 static void type_scope_exit(struct type_checker *tc);
 static int
 types_equal(struct type_checker *tc, struct type *t1, struct type *t2);
+static struct type *get_type_synonym(struct type_checker *tc, char *name);
 
 static int
 type_args_equal(struct type_checker *tc, struct type *t1, struct type *t2) {
@@ -121,6 +123,8 @@ type_args_equal(struct type_checker *tc, struct type *t1, struct type *t2) {
 static int
 types_equal(struct type_checker *tc, struct type *t1, struct type *t2) {
 	int args_are_equal;
+	struct type *t1_synonym;
+	struct type *t2_synonym;
 
 	if (is_type_var(t1) && is_type_var(t2)) {
 		report_error(tc->log, "Cannot bind two type variables");
@@ -136,6 +140,11 @@ types_equal(struct type_checker *tc, struct type *t1, struct type *t2) {
 		t1 = t1_new;
 	}
 
+	t1_synonym = get_type_synonym(tc, t1->name);
+	if (t1_synonym != NULL) {
+		t1 = t1_synonym;
+	}
+
 	if (is_type_var(t2)) {
 		struct type *t2_new = get_type_local(tc, t2->name);
 		if (t2_new == NULL) {
@@ -143,6 +152,11 @@ types_equal(struct type_checker *tc, struct type *t1, struct type *t2) {
 			return 1;
 		}
 		t2 = t2_new;
+	}
+
+	t2_synonym = get_type_synonym(tc, t2->name);
+	if (t2_synonym != NULL) {
+		t2 = t2_synonym;
 	}
 
 	if (!kinds_equal(t1->kind, t2->kind)) {
@@ -290,10 +304,35 @@ static void register_type(struct type_checker *tc, struct type *type) {
 	map_put_str(type_scope_global, type->name, type);
 }
 
-static struct type *substitute_type(struct type_checker *tc,
-                                    struct type *type) {
+static void
+register_type_synonym(struct type_checker *tc, char *name, struct type *type) {
+	map_put_str(tc->type_synonyms, name, type);
+}
+
+static struct type *get_type_synonym(struct type_checker *tc, char *name) {
+	return map_get_str(tc->type_synonyms, name);
+}
+
+static struct type *
+_substitute_type(struct type_checker *tc, struct type *type, int local) {
+	struct type *synonym_type;
+
 	if (is_type_var(type)) {
-		type = get_type(tc, type->name);
+		struct type *substitution;
+		if (local) {
+			substitution = get_type_local(tc, type->name);
+		} else {
+			substitution = get_type(tc, type->name);
+		}
+		if (substitution == NULL) {
+			return type;
+		}
+		type = substitution;
+	}
+
+	synonym_type = get_type_synonym(tc, type->name);
+	if (synonym_type != NULL) {
+		type = synonym_type;
 	}
 
 	assert(type != NULL);
@@ -303,11 +342,21 @@ static struct type *substitute_type(struct type_checker *tc,
 		list_map(copy->type_args,
 		         type->type_args,
 		         struct type *,
-		         _value = substitute_type(tc, _value));
+		         _value = _substitute_type(tc, _value, local));
 		type = copy;
 	}
 
 	return type;
+}
+
+static struct type *substitute_type(struct type_checker *tc,
+                                    struct type *type) {
+	return _substitute_type(tc, type, 0);
+}
+
+static struct type *substitute_type_local(struct type_checker *tc,
+                                          struct type *type) {
+	return _substitute_type(tc, type, 1);
 }
 
 /* ========== TYPE CONTEXTS ========== */
@@ -389,12 +438,18 @@ static int is_constructor(char *fn_identifier) {
 }
 
 static int type_is_valid(struct type_checker *tc, struct type *type) {
-	if (get_type(tc, type->name) == NULL) {
+	struct type *substitution_type = get_type_synonym(tc, type->name);
+
+	if (substitution_type == NULL) {
+		substitution_type = get_type(tc, type->name);
+	}
+
+	if (substitution_type == NULL) {
 		return 0;
 	}
 
 	if (type->kind == NULL) {
-		type->kind = get_type(tc, type->name)->kind;
+		type->kind = substitution_type->kind;
 	}
 
 	if (type->type_args != NULL) {
@@ -428,6 +483,9 @@ static struct type *get_expr_type(struct type_checker *tc, struct expr *expr) {
 	switch (expr->expr_type) {
 	case EXPR_IDENTIFIER:
 		expr->type = get_value_type(tc, expr->v.identifier);
+		if (expr->type == NULL) {
+			report_error_at(tc->log, "Undefined identifier", expr->source_index);
+		}
 		break;
 	case EXPR_APPLICATION: {
 		struct type *func_type;
@@ -467,6 +525,8 @@ static struct type *get_expr_type(struct type_checker *tc, struct expr *expr) {
 			expr_arg_type = get_expr_type(tc, expr_arg);
 			func_arg_type = list_head(func_type->type_args);
 			func_type     = list_last(func_type->type_args);
+
+			func_arg_type = substitute_type_local(tc, func_arg_type);
 
 			if (expr_arg_type == NULL) {
 				report_error_at(tc->log, "Expression has no type", expr->source_index);
@@ -596,7 +656,9 @@ static void bind_expr_param_to_type(struct type_checker *tc,
 	case EXPR_GROUPING:
 		bind_expr_param_to_type(tc, expr->v.grouping, type);
 		break;
-	case EXPR_LIST_NULL: break; /* TODO */
+	case EXPR_LIST_NULL:
+		check_types_equal(tc, type, get_value_type(tc, "[]"), expr->source_index);
+		break;
 	}
 }
 
@@ -646,10 +708,6 @@ static void type_check_def_value(struct type_checker *tc,
 	type_scope_enter(tc);
 	def_type = get_expr_type(tc, def_value->value);
 	if (def_type == NULL) {
-		report_error_at(
-			tc->log,
-			"Expression has invalid type (likely an unknown identifier)",
-			source_index);
 		type_scope_exit(tc);
 		return;
 	}
@@ -682,6 +740,7 @@ static void type_check_prog(struct type_checker *tc, struct prog *prog) {
 void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 	struct type_checker *tc = arena_push_struct_zero(arena, struct type_checker);
 
+	tc->type_synonyms = map_new();
 	tc->type_scopes   = list_new(NULL);
 	tc->type_contexts = list_new(NULL);
 	tc->arena         = arena;
@@ -697,6 +756,7 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 #define TYPE_ARROW (new_type(tc, "->", &kind_binary))
 #define TYPE_TUPLE (new_type(tc, "(,)", &kind_binary))
 
+#define TYPE_STRING (apply_type(tc, TYPE_LIST, &type_char))
 #define TYPE_LIST_A (apply_type(tc, TYPE_LIST, TYPE_VAR_A))
 #define TYPE_TUPLE_A_B                                                         \
 	(apply_type(tc, apply_type(tc, TYPE_TUPLE, TYPE_VAR_A), TYPE_VAR_B))
@@ -709,11 +769,13 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_LIST_A, TYPE_LIST_A)
 #define TYPE_CONSTRUCTOR_TUPLE                                                 \
 	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_B, TYPE_TUPLE_A_B)
+#define TYPE_EQ APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_A, &type_bool)
 
 		register_type(tc, &type_int);
 		register_type(tc, &type_double);
 		register_type(tc, &type_char);
 		register_type(tc, &type_bool);
+		register_type_synonym(tc, "String", TYPE_STRING);
 		register_type(tc, TYPE_ARROW);
 		register_type(tc, TYPE_TUPLE);
 		register_type(tc, TYPE_LIST);
@@ -721,6 +783,7 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 		set_value_type(tc, "[]", TYPE_LIST_A);
 		set_value_type(tc, ":", TYPE_CONSTRUCTOR_CONS);
 		set_value_type(tc, "(,)", TYPE_CONSTRUCTOR_TUPLE);
+		set_value_type(tc, "==", TYPE_EQ);
 	}
 
 	type_check_prog(tc, prog);
