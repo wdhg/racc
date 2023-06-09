@@ -128,6 +128,7 @@ static int kinds_equal(struct kind *k1, struct kind *k2) {
 		assert(k2->rhs != NULL);
 		return kinds_equal(k1->lhs, k2->lhs) && kinds_equal(k1->rhs, k2->rhs);
 	}
+	assert(0);
 }
 
 static int is_type_var(struct type *type) { return islower(type->name[0]); }
