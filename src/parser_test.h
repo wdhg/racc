@@ -31,7 +31,11 @@
 	region_sort, expected_name, expected_params_len)                             \
 	{                                                                            \
 		EXPECT(region_sort != NULL);                                               \
-		EXPECT(strcmp(region_sort->name, expected_name) == 0);                     \
+		if (expected_name == NULL) {                                               \
+			EXPECT(region_sort->name == NULL);                                       \
+		} else {                                                                   \
+			EXPECT(strcmp(region_sort->name, expected_name) == 0);                   \
+		}                                                                          \
 		if (expected_params_len == 0) {                                            \
 			EXPECT(region_sort->region_sort_params == NULL);                         \
 		} else {                                                                   \
@@ -725,6 +729,59 @@ test parse_stmt_parses_data_declarations(void) {
 	PASS();
 }
 
+test parse_stmt_parses_data_declarations_with_region_info(void) {
+	struct parser p = test_parser(
+		"data List'(r1,r2,r3) a\n  { Null'r1\n  | Cons'r1 a'r2 (List a)'r3\n  }");
+	struct stmt *stmt              = parse_stmt(&p);
+	struct list *type_queue        = list_new(p.arena);
+	struct list *region_sort_queue = list_new(p.arena);
+	struct dec_constructor *constructor;
+	EXPECT(p.log->had_error == 0);
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEC_DATA);
+	EXPECT(strcmp(stmt->v.dec_data->name, "List") == 0);
+	list_append(region_sort_queue, stmt->v.dec_data->region_sort);
+	EXPECT_REGION_SORT_EQUALS_DFS(region_sort_queue, NULL, 3);
+	EXPECT_REGION_SORT_EQUALS_DFS(region_sort_queue, "r1", 0);
+	EXPECT_REGION_SORT_EQUALS_DFS(region_sort_queue, "r2", 0);
+	EXPECT_REGION_SORT_EQUALS_DFS(region_sort_queue, "r3", 0);
+	EXPECT(list_length(region_sort_queue) == 0);
+	EXPECT(stmt->v.dec_data->type_vars != NULL);
+	EXPECT(list_length(stmt->v.dec_data->type_vars) == 1);
+	EXPECT(strcmp(list_get(stmt->v.dec_data->type_vars, 0), "a") == 0);
+	EXPECT(stmt->v.dec_data->dec_constructors != NULL);
+	EXPECT(list_length(stmt->v.dec_data->dec_constructors) == 2);
+
+	constructor = list_get(stmt->v.dec_data->dec_constructors, 0);
+	EXPECT(strcmp(constructor->name, "Null") == 0);
+	EXPECT(strcmp(constructor->region_var, "r1") == 0);
+	EXPECT(constructor->type_params != NULL);
+	EXPECT(list_length(constructor->type_params) == 0);
+
+	constructor = list_get(stmt->v.dec_data->dec_constructors, 1);
+	EXPECT(strcmp(constructor->name, "Cons") == 0);
+	EXPECT(strcmp(constructor->region_var, "r1") == 0);
+	EXPECT(constructor->type_params != NULL);
+	EXPECT(list_length(constructor->type_params) == 2);
+	list_prepend_all(type_queue, constructor->type_params);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "List", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT(list_length(type_queue) == 0);
+	EXPECT_REGION_SORT_EQUALS(
+		((struct type *)list_get(constructor->type_params, 0))->region_sort,
+		"r2",
+		0);
+	EXPECT_REGION_SORT_EQUALS(
+		((struct type *)list_get(constructor->type_params, 1))->region_sort,
+		"r3",
+		0);
+	EXPECT(list_length(region_sort_queue) == 0);
+
+	arena_free(p.arena);
+	PASS();
+}
+
 test parse_stmt_parses_type_declaration(void) {
 	struct parser p         = test_parser("myFunc :: Int -> String;");
 	struct stmt *stmt       = parse_stmt(&p);
@@ -874,6 +931,7 @@ void test_parser_h(void) {
 	TEST(parse_stmt_parses_basic_class_declarations);
 	TEST(parse_stmt_parses_class_declarations);
 	TEST(parse_stmt_parses_data_declarations);
+	TEST(parse_stmt_parses_data_declarations_with_region_info);
 	TEST(parse_stmt_parses_type_declaration);
 	TEST(parse_stmt_parses_basic_value_definitions);
 	TEST(parse_stmt_parses_instance_definitions);

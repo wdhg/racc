@@ -76,6 +76,7 @@ struct dec_class {
 
 struct dec_constructor {
 	char *name;
+	char *region_var;
 	struct list *type_params; /* list of struct type */
 	size_t source_index;
 };

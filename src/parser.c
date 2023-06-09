@@ -412,17 +412,18 @@ static struct region_sort *parse_type_region_sort(struct parser *p) {
 
 	if (peek_type(p) == TOK_IDENTIFIER) {
 		PARSE_IDENTIFIER(sort->name, "Expected region variable");
+		if (!match(p, TOK_AT)) {
+			return sort;
+		}
 	}
 
-	if (match(p, TOK_AT)) {
-		sort->region_sort_params = list_new(p->arena);
-		CONSUME(TOK_PAREN_L, "Expected opening '(' for region sort");
-		do {
-			struct region_sort *param = parse_type_region_sort(p);
-			list_append(sort->region_sort_params, param);
-		} while (match(p, TOK_COMMA));
-		CONSUME(TOK_PAREN_R, "Expected closing ')' for region sort");
-	}
+	sort->region_sort_params = list_new(p->arena);
+	CONSUME(TOK_PAREN_L, "Expected opening '(' for region sort");
+	do {
+		struct region_sort *param = parse_type_region_sort(p);
+		list_append(sort->region_sort_params, param);
+	} while (match(p, TOK_COMMA));
+	CONSUME(TOK_PAREN_R, "Expected closing ')' for region sort");
 
 	return sort;
 }
@@ -696,10 +697,17 @@ static struct dec_constructor *parse_dec_constructor(struct parser *p) {
 
 	PARSE_IDENTIFIER(constructor->name, "Expected constructor");
 
+	if (match(p, TOK_TICK)) {
+		PARSE_IDENTIFIER(constructor->region_var, "Expected region variable");
+	}
+
 	while (is_type_primary(peek_type(p))) {
 		struct type *type_arg = parse_type_primary(p);
 		if (type_arg == NULL) {
 			return constructor;
+		}
+		if (match(p, TOK_TICK)) {
+			type_arg->region_sort = parse_type_region_sort(p);
 		}
 		list_append(constructor->type_params, type_arg);
 	}
