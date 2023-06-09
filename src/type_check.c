@@ -31,19 +31,19 @@ int debug_indent_level = 0;
 /* ========== BASIC KINDS/TYPES ========== */
 
 struct kind kind_star = {
-	.type = KIND_STAR,
-	.lhs  = NULL,
-	.rhs  = NULL,
+	KIND_STAR,
+	NULL,
+	NULL,
 };
 struct kind kind_unary = {
-	.type = KIND_ARROW,
-	.lhs  = &kind_star,
-	.rhs  = &kind_star,
+	KIND_ARROW,
+	&kind_star,
+	&kind_star,
 };
 struct kind kind_binary = {
-	.type = KIND_ARROW,
-	.lhs  = &kind_star,
-	.rhs  = &kind_unary,
+	KIND_ARROW,
+	&kind_star,
+	&kind_unary,
 };
 
 struct kind *
@@ -56,32 +56,32 @@ kind_arrow(struct arena *arena, struct kind *lhs, struct kind *rhs) {
 }
 
 struct type type_int = {
-	.name             = "Int",
-	.kind             = &kind_star,
-	.type_args        = NULL,
-	.region_sort      = NULL,
-	.type_constraints = NULL,
+	"Int",
+	&kind_star,
+	NULL,
+	NULL,
+	NULL,
 };
 struct type type_double = {
-	.name             = "Double",
-	.kind             = &kind_star,
-	.type_args        = NULL,
-	.region_sort      = NULL,
-	.type_constraints = NULL,
+	"Double",
+	&kind_star,
+	NULL,
+	NULL,
+	NULL,
 };
 struct type type_char = {
-	.name             = "Char",
-	.kind             = &kind_star,
-	.type_args        = NULL,
-	.region_sort      = NULL,
-	.type_constraints = NULL,
+	"Char",
+	&kind_star,
+	NULL,
+	NULL,
+	NULL,
 };
 struct type type_bool = {
-	.name             = "Bool",
-	.kind             = &kind_star,
-	.type_args        = NULL,
-	.region_sort      = NULL,
-	.type_constraints = NULL,
+	"Bool",
+	&kind_star,
+	NULL,
+	NULL,
+	NULL,
 };
 
 #define TYPE_VAR_A (new_type(tc, "a", &kind_star))
