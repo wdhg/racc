@@ -77,6 +77,7 @@ struct dec_class {
 struct dec_constructor {
 	char *name;
 	struct list *type_params; /* list of struct type */
+	size_t source_index;
 };
 
 struct dec_data {
@@ -125,5 +126,6 @@ struct prog {
 };
 
 void print_type(struct type *type);
+void print_kind(struct kind *kind);
 
 #endif

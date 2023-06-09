@@ -691,7 +691,8 @@ static struct def_instance *parse_def_instance(struct parser *p) {
 static struct dec_constructor *parse_dec_constructor(struct parser *p) {
 	struct dec_constructor *constructor =
 		arena_push_struct_zero(p->arena, struct dec_constructor);
-	constructor->type_params = list_new(p->arena);
+	constructor->type_params  = list_new(p->arena);
+	constructor->source_index = peek(p)->lexeme_index;
 
 	PARSE_IDENTIFIER(constructor->name, "Expected constructor");
 
