@@ -151,6 +151,39 @@ TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_nested_generic_uses_of_equal,
                        "myFunc :: Int -> Int -> Bool;\n"
                        "myFunc x y = (x == y) == 3;")
 
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_basic_data_types,
+                       "data YesNo { Yes | No }\n"
+                       "yes :: YesNo;\n"
+                       "yes = Yes;")
+
+TYPE_CHECK_TEST_ACCEPT(
+	type_check_accepts_valid_basic_data_types_with_concrete_args,
+	"data ID { ID Int }\n"
+	"myID :: ID;\n"
+	"myID = ID 3;")
+
+TYPE_CHECK_TEST_REJECT(
+	type_check_rejects_invalid_basic_data_types_with_unknown_args,
+	"data ID { ID a }\n")
+
+TYPE_CHECK_TEST_ACCEPT(
+	type_check_accepts_valid_basic_data_types_with_generic_args,
+	"data ID a { ID a }\n")
+
+TYPE_CHECK_TEST_ACCEPT(
+	type_check_accepts_valid_basic_data_types_with_multiple_generic_args,
+	"data Either a b { Left a | Right b }\n"
+	"myInt :: Either Int Char;\n"
+	"myInt = Left 3;\n"
+	"myChar :: Either Int Char;\n"
+	"myChar = Right 'a';\n")
+
+TYPE_CHECK_TEST_REJECT(
+	type_check_rejects_invalid_use_of_basic_data_types_with_multiple_generic_args,
+	"data Either a b { Left a | Right b }\n"
+	"myChar :: Either Int Char;\n"
+	"myChar = Left 'a';\n")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -183,4 +216,11 @@ void test_type_check_h(void) {
 	TEST(type_check_rejects_invalid_use_of_literal_strings);
 	TEST(type_check_accepts_valid_nested_generic_uses_of_equal);
 	TEST(type_check_rejects_invalid_nested_generic_uses_of_equal);
+	TEST(type_check_accepts_valid_basic_data_types);
+	TEST(type_check_accepts_valid_basic_data_types_with_concrete_args);
+	TEST(type_check_rejects_invalid_basic_data_types_with_unknown_args);
+	TEST(type_check_accepts_valid_basic_data_types_with_generic_args);
+	TEST(type_check_accepts_valid_basic_data_types_with_multiple_generic_args);
+	TEST(
+		type_check_rejects_invalid_use_of_basic_data_types_with_multiple_generic_args);
 }

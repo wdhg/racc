@@ -46,6 +46,15 @@ struct kind kind_binary = {
 	.rhs  = &kind_unary,
 };
 
+struct kind *
+kind_arrow(struct arena *arena, struct kind *lhs, struct kind *rhs) {
+	struct kind *kind = arena_push_struct_zero(arena, struct kind);
+	kind->type        = KIND_ARROW;
+	kind->lhs         = lhs;
+	kind->rhs         = rhs;
+	return kind;
+}
+
 struct type type_int = {
 	.name             = "Int",
 	.kind             = &kind_star,
@@ -74,6 +83,28 @@ struct type type_bool = {
 	.region_sort      = NULL,
 	.type_constraints = NULL,
 };
+
+#define TYPE_VAR_A (new_type(tc, "a", &kind_star))
+#define TYPE_VAR_B (new_type(tc, "b", &kind_star))
+#define TYPE_LIST  (new_type(tc, "[]", &kind_unary))
+#define TYPE_ARROW (new_type(tc, "->", &kind_binary))
+#define TYPE_TUPLE (new_type(tc, "(,)", &kind_binary))
+
+#define TYPE_STRING (apply_type(tc, TYPE_LIST, &type_char))
+#define TYPE_LIST_A (apply_type(tc, TYPE_LIST, TYPE_VAR_A))
+#define TYPE_TUPLE_A_B                                                         \
+	(apply_type(tc, apply_type(tc, TYPE_TUPLE, TYPE_VAR_A), TYPE_VAR_B))
+
+#define APPLY_A_ARROW_B(A, B) (apply_type(tc, apply_type(tc, TYPE_ARROW, A), B))
+#define APPLY_A_ARROW_B_ARROW_C(A, B, C)                                       \
+	APPLY_A_ARROW_B(A, APPLY_A_ARROW_B(B, C))
+
+#define TYPE_EQ APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_A, &type_bool)
+
+#define TYPE_CONSTRUCTOR_CONS                                                  \
+	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_LIST_A, TYPE_LIST_A)
+#define TYPE_CONSTRUCTOR_TUPLE                                                 \
+	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_B, TYPE_TUPLE_A_B)
 
 /* ========== EQUALITY CHECKING ========== */
 
@@ -301,6 +332,15 @@ static struct type *copy_type(struct type_checker *tc, struct type *type) {
 
 static void register_type(struct type_checker *tc, struct type *type) {
 	struct map *type_scope_global = list_last(tc->type_scopes);
+
+#ifdef DEBUG
+	printf("> ");
+	print_type(type);
+	printf(" :: ");
+	print_kind(type->kind);
+	printf("\n");
+#endif
+
 	map_put_str(type_scope_global, type->name, type);
 }
 
@@ -665,6 +705,57 @@ static void bind_expr_param_to_type(struct type_checker *tc,
 	}
 }
 
+static struct type *
+get_dec_constructor_type(struct type_checker *tc,
+                         struct dec_constructor *dec_constructor,
+                         struct type *data_type) {
+	struct type *constructor_type = data_type;
+
+	list_for_each(
+		dec_constructor->type_params,
+		struct type *,
+		int is_valid = type_is_valid(tc, _value);
+		if (!is_valid) report_error_at(
+			tc->log, "Invalid constructor", dec_constructor->source_index);
+		if (!is_valid) return NULL;
+		else constructor_type = APPLY_A_ARROW_B(_value, constructor_type));
+
+	return constructor_type;
+}
+
+static void type_check_dec_data(struct type_checker *tc,
+                                struct dec_data *dec_data,
+                                size_t source_index) {
+	struct kind *data_type_kind = &kind_star;
+	struct type *data_type;
+
+	list_for_each(dec_data->type_vars, char *, (void)_value;
+	              data_type_kind =
+	                kind_arrow(tc->arena, &kind_star, data_type_kind));
+
+	data_type = new_type(tc, dec_data->name, data_type_kind);
+
+	register_type(tc, data_type);
+	data_type = copy_type(tc, data_type);
+
+	type_scope_enter(tc);
+
+	list_for_each(dec_data->type_vars,
+	              char *,
+	              struct type *type_var = new_type(tc, _value, &kind_star);
+	              set_type(tc, _value, type_var);
+	              apply_type(tc, data_type, type_var));
+
+	list_for_each(dec_data->dec_constructors,
+	              struct dec_constructor *,
+	              struct type *constructor_type =
+	                get_dec_constructor_type(tc, _value, data_type);
+	              if (constructor_type != NULL)
+	                set_value_type(tc, _value->name, constructor_type));
+
+	type_scope_exit(tc);
+}
+
 static void type_check_dec_type(struct type_checker *tc,
                                 struct dec_type *dec_type,
                                 size_t source_index) {
@@ -722,7 +813,9 @@ static void type_check_def_value(struct type_checker *tc,
 static void type_check_stmt(struct type_checker *tc, struct stmt *stmt) {
 	tc->source_index = stmt->source_index;
 	switch (stmt->type) {
-	case STMT_DEC_DATA: break; /* TODO */
+	case STMT_DEC_DATA:
+		type_check_dec_data(tc, stmt->v.dec_data, stmt->source_index);
+		break;
 	case STMT_DEC_TYPE:
 		type_check_dec_type(tc, stmt->v.dec_type, stmt->source_index);
 		break;
@@ -751,28 +844,6 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 
 	type_context_enter(tc);
 	type_scope_enter(tc);
-
-#define TYPE_VAR_A (new_type(tc, "a", &kind_star))
-#define TYPE_VAR_B (new_type(tc, "b", &kind_star))
-#define TYPE_LIST  (new_type(tc, "[]", &kind_unary))
-#define TYPE_ARROW (new_type(tc, "->", &kind_binary))
-#define TYPE_TUPLE (new_type(tc, "(,)", &kind_binary))
-
-#define TYPE_STRING (apply_type(tc, TYPE_LIST, &type_char))
-#define TYPE_LIST_A (apply_type(tc, TYPE_LIST, TYPE_VAR_A))
-#define TYPE_TUPLE_A_B                                                         \
-	(apply_type(tc, apply_type(tc, TYPE_TUPLE, TYPE_VAR_A), TYPE_VAR_B))
-
-#define APPLY_A_ARROW_B(A, B) (apply_type(tc, apply_type(tc, TYPE_ARROW, A), B))
-#define APPLY_A_ARROW_B_ARROW_C(A, B, C)                                       \
-	APPLY_A_ARROW_B(A, APPLY_A_ARROW_B(B, C))
-
-#define TYPE_EQ APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_A, &type_bool)
-
-#define TYPE_CONSTRUCTOR_CONS                                                  \
-	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_LIST_A, TYPE_LIST_A)
-#define TYPE_CONSTRUCTOR_TUPLE                                                 \
-	APPLY_A_ARROW_B_ARROW_C(TYPE_VAR_A, TYPE_VAR_B, TYPE_TUPLE_A_B)
 
 	register_type(tc, &type_int);
 	register_type(tc, &type_double);
