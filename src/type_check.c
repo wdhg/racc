@@ -740,9 +740,11 @@ static void type_check_dec_data(struct type_checker *tc,
 
 	type_scope_enter(tc);
 
-	list_for_each(dec_data->type_vars,
-	              char *,
-	              struct type *type_var = new_type(tc, _value, &kind_star);
+	list_for_each(dec_data->type_vars, char *, struct type *type_var;
+	              if (get_type_local(tc, _value) != NULL)
+	                report_error_at(tc->log, "Duplicate type var", source_index);
+	              if (get_type_local(tc, _value) != NULL) return;
+	              type_var = new_type(tc, _value, &kind_star);
 	              set_type(tc, _value, type_var);
 	              apply_type(tc, data_type, type_var));
 

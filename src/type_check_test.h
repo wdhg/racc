@@ -184,6 +184,10 @@ TYPE_CHECK_TEST_REJECT(
 	"myChar :: Either Int Char;\n"
 	"myChar = Left 'a';\n")
 
+TYPE_CHECK_TEST_REJECT(
+	type_check_rejects_duplicate_type_vars_in_data_declaration,
+	"data Either a a { Left a | Right a }\n")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -223,4 +227,5 @@ void test_type_check_h(void) {
 	TEST(type_check_accepts_valid_basic_data_types_with_multiple_generic_args);
 	TEST(
 		type_check_rejects_invalid_use_of_basic_data_types_with_multiple_generic_args);
+	TEST(type_check_rejects_duplicate_type_vars_in_data_declaration);
 }
