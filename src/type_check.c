@@ -665,6 +665,7 @@ static void bind_expr_param_application_to_type(struct type_checker *tc,
 static void bind_expr_param_to_type(struct type_checker *tc,
                                     struct expr *expr,
                                     struct type *type) {
+	expr->type = type;
 	switch (expr->expr_type) {
 	case EXPR_IDENTIFIER:
 		if (expr->v.identifier[0] == '_') {
