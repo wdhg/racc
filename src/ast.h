@@ -129,4 +129,6 @@ struct prog {
 void print_type(struct type *type);
 void print_kind(struct kind *kind);
 
+int is_type_var(struct type *type);
+
 #endif

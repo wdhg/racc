@@ -2,6 +2,7 @@
 #include "list.h"
 #include "string.h"
 #include <assert.h>
+#include <ctype.h>
 #include <stdio.h>
 
 void print_type(struct type *type) {
@@ -67,3 +68,5 @@ void print_kind(struct kind *kind) {
 		break;
 	}
 }
+
+int is_type_var(struct type *type) { return islower(type->name[0]); }

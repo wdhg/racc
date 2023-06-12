@@ -131,8 +131,6 @@ static int kinds_equal(struct kind *k1, struct kind *k2) {
 	assert(0);
 }
 
-static int is_type_var(struct type *type) { return islower(type->name[0]); }
-
 static struct type *get_type_local(struct type_checker *tc,
                                    char *type_identifier);
 static void set_type(struct type_checker *tc, char *name, struct type *type);
@@ -863,6 +861,8 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 	set_value_type(tc, "[]", TYPE_LIST_A);
 	set_value_type(tc, ":", TYPE_CONSTRUCTOR_CONS);
 	set_value_type(tc, "(,)", TYPE_CONSTRUCTOR_TUPLE);
+	set_value_type(
+		tc, "+", APPLY_A_ARROW_B_ARROW_C(&type_int, &type_int, &type_int));
 
 	type_check_prog(tc, prog);
 
