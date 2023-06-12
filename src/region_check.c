@@ -98,6 +98,10 @@ check_regions_in_dec_constructor(struct region_checker *rc,
 
 static void check_regions_in_dec_data(struct region_checker *rc,
                                       struct dec_data *dec_data) {
+	assert(dec_data->region_sort != NULL);
+
+	map_put_str(rc->type_to_region_sort, dec_data->name, dec_data->region_sort);
+
 	list_for_each(dec_data->dec_constructors,
 	              struct dec_constructor *,
 	              check_regions_in_dec_constructor(rc, _value));
