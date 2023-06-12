@@ -2,13 +2,16 @@ DIR_SRC = src
 DIR_BIN = bin
 DIR_LIB = lib
 DIR_OBJ = obj
-DIR_OBJ_MAIN = $(DIR_OBJ)/main
+DIR_MOD = mod
+DIR_OBJ_MAIN  = $(DIR_OBJ)/main
 DIR_OBJ_DEBUG = $(DIR_OBJ)/debug
-DIR_OBJ_TEST = $(DIR_OBJ)/test
+DIR_OBJ_TEST  = $(DIR_OBJ)/test
 
 EXE_MAIN  = $(DIR_BIN)/racc
 EXE_DEBUG = $(DIR_BIN)/racc_debug
 EXE_TEST  = $(DIR_BIN)/racc_test
+OBJ_BASE  = $(DIR_OBJ)/base.o
+OBJ_BASE_DEBUG  = $(DIR_OBJ)/base_debug.o
 
 C_FLAGS  = -Wall -Wextra -pedantic -std=c89
 C_FLAGS += -I$(DIR_LIB)/ctest/include
@@ -17,6 +20,7 @@ C_FLAGS += -I$(DIR_LIB)/fixint/include
 
 MAIN_C = $(DIR_SRC)/main.c
 TEST_C = $(DIR_SRC)/test.c
+BASE_C = $(DIR_MOD)/base.c
 
 TESTS   = $(wildcard $(DIR_SRC)/*_test.h)
 HEADERS = $(filter-out $(TESTS),$(wildcard $(DIR_SRC)/*.h))
@@ -46,6 +50,12 @@ debug: $(EXE_DEBUG)
 
 .PHONY: test
 test: $(EXE_TEST)
+
+.PHONY: base
+base: $(OBJ_BASE)
+
+.PHONY: base-debug
+base-debug: $(OBJ_BASE_DEBUG)
 
 .PHONY: libs
 libs:
@@ -79,6 +89,13 @@ $(DIR_OBJ_DEBUG)/%.o: $(DIR_SRC)/%.c
 
 $(DIR_OBJ_TEST)/%.o: $(DIR_SRC)/%.c $(TESTS)
 	mkdir -p $(dir $@)
+	$(CC) -c -o $@ $< $(C_FLAGS) -g
+
+
+$(OBJ_BASE): $(BASE_C)
+	$(CC) -c -o $@ $< $(C_FLAGS)
+
+$(OBJ_BASE_DEBUG): $(BASE_C)
 	$(CC) -c -o $@ $< $(C_FLAGS) -g
 
 .PHONY: clean
