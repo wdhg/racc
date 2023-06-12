@@ -1,6 +1,7 @@
 #include "map.h"
 #include "fixint.h"
 #include "list.h"
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -151,4 +152,46 @@ void *map_get_str(struct map *map, char *key) {
 
 void *map_get_u64(struct map *map, u64 key) {
 	return map_get(map, (u8 *)&key, sizeof(u64) / sizeof(u8));
+}
+
+struct map_iter map_iterate(struct map *map) {
+	struct map_iter iter;
+	iter.map                    = map;
+	iter.bucket_iter.curr       = NULL;
+	iter.bucket_iter.next       = NULL;
+	iter.bucket_iter.list       = NULL;
+	iter.bucket_iter.is_reverse = 0;
+	iter.index_curr             = 0;
+
+	for (iter.index_next = 0; iter.index_next < (1 << iter.map->buckets_bit);
+	     iter.index_next++) {
+		if (iter.map->buckets[iter.index_next] != NULL) {
+			break;
+		}
+	}
+
+	return iter;
+}
+
+void *map_iter_next(struct map_iter *iter) {
+	assert(!map_iter_at_end(iter));
+
+	if (list_iter_at_end(&iter->bucket_iter)) {
+		iter->index_curr  = iter->index_next;
+		iter->bucket_iter = list_iterate(iter->map->buckets[iter->index_curr]);
+
+		iter->index_next++; /* increment so index_curr != index_next */
+		for (; iter->index_next < (1 << iter->map->buckets_bit);
+		     iter->index_next++) {
+			if (iter->map->buckets[iter->index_next] != NULL) {
+				break;
+			}
+		}
+	}
+
+	return ((struct map_list_elem *)list_iter_next(&iter->bucket_iter))->value;
+}
+
+int map_iter_at_end(struct map_iter *iter) {
+	return iter->index_next >= (1 << iter->map->buckets_bit);
 }
