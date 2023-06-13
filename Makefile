@@ -10,8 +10,6 @@ DIR_OBJ_TEST  = $(DIR_OBJ)/test
 EXE_MAIN  = $(DIR_BIN)/racc
 EXE_DEBUG = $(DIR_BIN)/racc_debug
 EXE_TEST  = $(DIR_BIN)/racc_test
-OBJ_BASE  = $(DIR_OBJ)/base.o
-OBJ_BASE_DEBUG  = $(DIR_OBJ)/base_debug.o
 
 C_FLAGS  = -Wall -Wextra -pedantic -std=c89
 C_FLAGS += -I$(DIR_LIB)/ctest/include
@@ -41,6 +39,10 @@ OBJECTS_LIBS_MAIN += $(DIR_LIB)/ctest/obj/lib/ctest.o
 
 OBJECTS_LIBS_DEBUG  = $(DIR_LIB)/arena/obj/debug/arena.o
 OBJECTS_LIBS_DEBUG += $(DIR_LIB)/ctest/obj/debug/ctest.o
+
+OBJ_BASE       = $(DIR_OBJ_MAIN)/base.o
+OBJ_BASE_DEBUG = $(DIR_OBJ_DEBUG)/base.o
+
 
 .PHONY: main
 main: $(EXE_MAIN)
