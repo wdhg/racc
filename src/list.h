@@ -44,6 +44,15 @@ int list_iter_at_end(struct list_iter *iter);
 		}                                                                          \
 	}
 
+#define list_for_each_reverse(LIST, LIST_VALUE_TYPE, FUNCTION_CALL)            \
+	{                                                                            \
+		struct list_iter _list_for_each_iter = list_iterate_reverse(LIST);         \
+		while (!list_iter_at_end(&_list_for_each_iter)) {                          \
+			LIST_VALUE_TYPE _value = list_iter_next(&_list_for_each_iter);           \
+			FUNCTION_CALL;                                                           \
+		}                                                                          \
+	}
+
 #define list_map(LIST_DEST, LIST, LIST_VALUE_TYPE, FUNCTION_CALL)              \
 	{                                                                            \
 		list_clear(LIST_DEST);                                                     \
