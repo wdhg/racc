@@ -507,6 +507,8 @@ static int type_is_valid(struct type_checker *tc, struct type *type) {
 	return 1;
 }
 
+static void type_check_stmt(struct type_checker *tc, struct stmt *stmt);
+
 static struct type *get_expr_type(struct type_checker *tc, struct expr *expr) {
 #ifdef DEBUG
 	for (int i = 0; i < debug_indent_level; i++) {
@@ -590,6 +592,13 @@ static struct type *get_expr_type(struct type_checker *tc, struct expr *expr) {
 	case EXPR_GROUPING: expr->type = get_expr_type(tc, expr->v.grouping); break;
 	case EXPR_LIST_NULL:
 		expr->type = substitute_type(tc, get_value_type(tc, "[]"));
+		break;
+	case EXPR_LET_IN:
+		type_context_enter(tc);
+		list_for_each(
+			expr->v.let_in.stmts, struct stmt *, type_check_stmt(tc, _value));
+		expr->type = get_expr_type(tc, expr->v.let_in.value);
+		type_context_exit(tc);
 		break;
 	}
 
@@ -702,6 +711,11 @@ static void bind_expr_param_to_type(struct type_checker *tc,
 	case EXPR_LIST_NULL:
 		check_types_equal(tc, type, get_value_type(tc, "[]"), expr->source_index);
 		break;
+	case EXPR_LET_IN:
+		report_error_at(tc->log,
+		                "Cannot pattern match against let .. in expression",
+		                expr->source_index);
+		break;
 	}
 }
 
@@ -765,7 +779,7 @@ static void type_check_dec_type(struct type_checker *tc,
 		report_error_at(tc->log, "Invalid declaration", source_index);
 		return;
 	}
-	if (get_value_type(tc, dec_type->name) != NULL) {
+	if (value_exists_in_current_context(tc, dec_type->name)) {
 		report_error_at(tc->log, "Redeclaration of value type", source_index);
 		return;
 	}

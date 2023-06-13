@@ -13,7 +13,8 @@ enum expr_type {
 	EXPR_LIT_CHAR,
 	EXPR_LIT_BOOL,
 	EXPR_LIST_NULL,
-	EXPR_GROUPING
+	EXPR_GROUPING,
+	EXPR_LET_IN
 };
 
 struct expr {
@@ -33,6 +34,11 @@ struct expr {
 			char *fn;
 			struct list *expr_args; /* list of struct expr */
 		} application;
+
+		struct {
+			struct list *stmts; /* dec_type or def_value only */
+			struct expr *value;
+		} let_in;
 	} v;
 
 	struct type *type;               /* set during type checking */

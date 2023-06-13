@@ -392,10 +392,45 @@ static struct expr *parse_expr_equality(struct parser *p) {
 	return expr;
 }
 
+static struct expr *parse_expr_let_in(struct parser *p) {
+	struct expr *expr;
+
+	if (!match(p, TOK_LET)) {
+		return parse_expr_equality(p);
+	}
+
+	expr                 = arena_push_struct_zero(p->arena, struct expr);
+	expr->expr_type      = EXPR_LET_IN;
+	expr->v.let_in.stmts = list_new(p->arena);
+
+	do {
+		size_t source_index = peek(p)->lexeme_index;
+		struct stmt *stmt   = parse_stmt(p);
+		if (stmt == NULL) {
+			return NULL;
+		}
+		switch (stmt->type) {
+		case STMT_DEC_TYPE:
+		case STMT_DEF_VALUE: list_append(expr->v.let_in.stmts, stmt); break;
+		default:
+			report_error_at(p->log, "Invalid statement type", source_index);
+			return NULL;
+		}
+	} while (!match(p, TOK_IN));
+
+	expr->v.let_in.value = parse_expr(p);
+
+	if (expr->v.let_in.value == NULL) {
+		return NULL;
+	}
+
+	return expr;
+}
+
 struct expr *parse_expr(struct parser *p) {
 	struct expr *expr;
 	size_t source_index = peek(p)->lexeme_index;
-	expr                = parse_expr_equality(p);
+	expr                = parse_expr_let_in(p);
 	if (expr != NULL) {
 		expr->source_index = source_index;
 	}

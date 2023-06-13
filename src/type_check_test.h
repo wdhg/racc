@@ -188,6 +188,25 @@ TYPE_CHECK_TEST_REJECT(
 	type_check_rejects_duplicate_type_vars_in_data_declaration,
 	"data Either a a { Left a | Right a }\n")
 
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_basic_let_in_expressions,
+                       "myFunc :: Int -> Int;\n"
+                       "myFunc x = let y :: Int;\n"
+                       "               y = x + 1;"
+                       "           in y;\n")
+
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_shadowing_let_in_expressions,
+                       "y :: Char;\n"
+                       "myFunc :: Int -> Int;\n"
+                       "myFunc x = let y :: Int;\n"
+                       "               y = x + 1;"
+                       "           in y;\n")
+
+TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_basic_let_in_expressions,
+                       "myFunc :: Int -> Int;\n"
+                       "myFunc x = let y :: Char;\n"
+                       "               y = 'a';"
+                       "           in y;\n")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -228,4 +247,7 @@ void test_type_check_h(void) {
 	TEST(
 		type_check_rejects_invalid_use_of_basic_data_types_with_multiple_generic_args);
 	TEST(type_check_rejects_duplicate_type_vars_in_data_declaration);
+	TEST(type_check_accepts_valid_basic_let_in_expressions);
+	TEST(type_check_rejects_invalid_basic_let_in_expressions);
+	TEST(type_check_accepts_valid_shadowing_let_in_expressions);
 }
