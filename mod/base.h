@@ -1,43 +1,78 @@
 #ifndef RACC_BASE_H
 #define RACC_BASE_H
 
+#include <arena.h>
 #include <stddef.h>
+
+/* ========== REGIONS ========== */
+
+enum region_type { REGION_FINITE, REGION_INFINITE };
+
+struct region {
+	enum region_type type;
+
+	union {
+		struct {
+			void *bytes;
+		} finite;
+
+		struct {
+			struct arena *arena;
+			size_t reference_count;
+		} infinite;
+	} v;
+};
+
+struct region *region_new_finite(void *);
+struct region *region_new_infinite(void);
+void region_free(struct region *);
+void region_retain(struct region *);
+void region_release(struct region *);
+
+/* TODO implement finite region allocation */
+#define region_alloc(REGION, TYPE)                                             \
+	(arena_push_struct_zero(REGION->v.infinite.arena, TYPE))
 
 /* ========== CLOSURES/THUNKS ========== */
 
 struct thunk;
-struct closure;
-
-struct thunk {
-	int evaluated;
-
-	/* evaluated = 0 */
-	struct closure *closure;
-
-	/* evaluated = 1 */
-	void *value;
-};
 
 struct closure {
 	size_t fn_arity;
 	size_t args_len;
-	void *(*fn)(struct thunk **args);
+	void *(*fn)(struct thunk **, struct region *);
 	struct thunk **args;
 };
 
-void *_thunk_eval(struct thunk *thunk);
+struct thunk {
+	struct region *region;
+	int evaluated;
+	void *(*value_copy)(void *, struct region *);
+
+	/* evaluated = 1 */
+	void *value;
+
+	/* evaluated = 0 */
+	struct closure *closure;
+};
+
+void *_thunk_eval(struct thunk *);
 #define thunk_eval(THUNK, TYPE) ((TYPE)_thunk_eval(THUNK))
-
-struct thunk *closure_to_thunk(struct closure *closure);
-
-struct closure *closure_apply(struct closure *closure, struct thunk *arg);
-void *closure_eval(struct closure *closure);
-
-struct thunk *lit_thunk(void *value);
+struct thunk *thunk_closure(struct closure *,
+                            struct region *,
+                            void *(*)(void *, struct region *));
+struct thunk *
+thunk_lit(void *, struct region *, void *(*)(void *, struct region *));
+struct thunk *thunk_apply(struct thunk *, struct thunk *);
+struct thunk *thunk_copy(struct thunk *, struct region *);
+void thunk_retain(struct thunk *);
+void thunk_release(struct thunk *);
 
 /* ========== CONTROL FLOW ========== */
 
 /* ========== LANGUAGE DEFINED DATA TYPES ========== */
+
+/* TODO rename to avoid potential collisions with user defined structures */
 
 enum base_List_type { DATA_List_Null, DATA_List_Cons };
 
@@ -73,60 +108,27 @@ struct base_Tuple *data_Tuple_Tuple(void);
 /* ========== LANGUAGE DEFINED FUNCTIONS ========== */
 
 /* arithmetic */
-void *fn_add(struct thunk **args);
-void *fn_sub(struct thunk **args);
-void *fn_mul(struct thunk **args);
-void *fn_div(struct thunk **args);
+void *fn_add(struct thunk **, struct region *);
+void *fn_sub(struct thunk **, struct region *);
+void *fn_mul(struct thunk **, struct region *);
+void *fn_div(struct thunk **, struct region *);
 
-struct closure _closure_add = {
-	.fn_arity = 2,
-	.args_len = 0,
-	.fn       = fn_add,
-	.args     = NULL,
-};
-struct closure _closure_sub = {
-	.fn_arity = 2,
-	.args_len = 0,
-	.fn       = fn_sub,
-	.args     = NULL,
-};
-struct closure _closure_mul = {
-	.fn_arity = 2,
-	.args_len = 0,
-	.fn       = fn_mul,
-	.args     = NULL,
-};
-struct closure _closure_div = {
-	.fn_arity = 2,
-	.args_len = 0,
-	.fn       = fn_div,
-	.args     = NULL,
-};
-
-struct closure *closure_add = &_closure_add;
-struct closure *closure_sub = &_closure_sub;
-struct closure *closure_mul = &_closure_mul;
-struct closure *closure_div = &_closure_div;
+struct closure *closure_add;
+struct closure *closure_sub;
+struct closure *closure_mul;
+struct closure *closure_div;
 
 /* comparisons */
-void *fn_eq(struct thunk **args);
-void *fn_lt(struct thunk **args);
-void *fn_gt(struct thunk **args);
-void *fn_lte(struct thunk **args);
-void *fn_gte(struct thunk **args);
+void *fn_eq(struct thunk **, struct region *);
+void *fn_lt(struct thunk **, struct region *);
+void *fn_gt(struct thunk **, struct region *);
+void *fn_lte(struct thunk **, struct region *);
+void *fn_gte(struct thunk **, struct region *);
 
 struct closure *closure_eq;
 struct closure *closure_lt;
 struct closure *closure_gt;
 struct closure *closure_lte;
 struct closure *closure_gte;
-
-/* lists */
-
-/* TODO */
-
-/* tuples */
-
-/* TODO */
 
 #endif

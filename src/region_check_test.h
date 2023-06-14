@@ -32,10 +32,10 @@
 	REGION_CHECK_TEST(name, _source, 1)
 
 REGION_CHECK_TEST_ACCEPT(check_regions_accepts_basic_input,
-                         "data Maybe'(r1,r2) a {\n"
-                         "  Maybe'r1 a'r2\n"
+                         "data Maybe a {\n"
+                         "  Maybe a\n"
                          "}\n"
-                         "getInt :: Maybe Int '(_,r2) -> Int'r2;\n"
+                         "getInt :: Maybe Int 'r -> Int'r;\n"
                          "getInt (Maybe x) = x;\n"
                          "getInt Nothing = 0;\n")
 

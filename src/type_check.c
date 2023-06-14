@@ -249,7 +249,7 @@ static struct type *new_type(struct type_checker *tc,
 	strcpy(type->name, type_identifier);
 	type->kind             = type_kind;
 	type->type_args        = NULL;
-	type->region_sort      = NULL;
+	type->region_var       = NULL;
 	type->type_constraints = NULL;
 	return type;
 }

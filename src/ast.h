@@ -45,11 +45,6 @@ struct expr {
 	struct region_sort *region_sort; /* set during region checking */
 };
 
-struct region_sort {
-	char *name;
-	struct list *region_sort_params; /* list of struct region_sort */
-};
-
 enum kind_type { KIND_STAR, KIND_ARROW, KIND_CONSTRAINT };
 
 struct kind {
@@ -65,7 +60,7 @@ struct type {
 	char *name;
 	struct kind *kind;
 	struct list *type_args; /* list of struct type* */
-	struct region_sort *region_sort;
+	char *region_var;
 	struct list *type_constraints; /* UNUSED list of struct type* */
 };
 
@@ -82,14 +77,12 @@ struct dec_class {
 
 struct dec_constructor {
 	char *name;
-	char *region_var;
 	struct list *type_params; /* list of struct type */
 	size_t source_index;
 };
 
 struct dec_data {
 	char *name;
-	struct region_sort *region_sort;
 	struct list *type_vars;        /* list of char* */
 	struct list *dec_constructors; /* list of struct dec_constructor */
 };

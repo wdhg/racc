@@ -65,12 +65,20 @@ code_gen_dec_constructor_func(struct code_generator *cg,
 	} else {
 		size_t i;
 		fprintf(
-			cg->fptr, "void *fn_%s(struct thunk **args) {\n", dec_constructor->name);
+			cg->fptr,
+			"void *fn_%s(struct thunk **args, struct region_tree *region_tree) {\n",
+			dec_constructor->name);
 		fprintf(cg->fptr, "\tstruct data_%s *value;\n", data_name);
 
-		/* TODO allocate value in arena */
+		fprintf(cg->fptr, "\tif (region == NULL) {\n");
 		fprintf(
 			cg->fptr, "\tvalue = calloc(1, sizeof(struct data_%s));\n", data_name);
+		fprintf(cg->fptr, "\t} else {\n");
+		fprintf(
+			cg->fptr,
+			"\t\tvalue = arena_push_struct_zero(region->v.arena, struct data_%s);\n",
+			data_name);
+		fprintf(cg->fptr, "\t}\n");
 
 		fprintf(cg->fptr,
 		        "\tvalue->type = DATA_%s_%s;\n",
@@ -168,9 +176,10 @@ static void code_gen_stmt(struct code_generator *cg, struct stmt *stmt) {
 }
 
 static void code_gen_prog(struct code_generator *cg, struct prog *prog) {
+	fprintf(cg->fptr, "#include <arena.h>\n");
+	fprintf(cg->fptr, "#include <base.h>\n");
 	fprintf(cg->fptr, "#include <stdio.h>\n");
 	fprintf(cg->fptr, "#include <stdlib.h>\n");
-	fprintf(cg->fptr, "#include <base.h>\n");
 	fprintf(cg->fptr, "\n");
 	list_for_each(prog->stmts, struct stmt *, code_gen_stmt(cg, _value));
 }
@@ -343,7 +352,8 @@ static char *translate_function_name(char *fn_name) {
 
 static void code_gen_expr(struct code_generator *cg,
                           struct expr *expr,
-                          struct map *identifier_to_var_index) {
+                          struct map *identifier_to_var_index,
+                          struct map *region_var_to_var_index) {
 	switch (expr->expr_type) {
 	case EXPR_IDENTIFIER: {
 		size_t var_index = 0;
@@ -363,17 +373,28 @@ static void code_gen_expr(struct code_generator *cg,
 		list_for_each(expr->v.application.expr_args, struct expr *, (void)_value;
 		              fprintf(cg->fptr, "closure_apply("));
 		fprintf(cg->fptr, "closure_%s, ", translate_function_name(fn_name));
-		list_for_each(expr->v.application.expr_args, struct expr *, (void)_value;
-		              code_gen_expr(cg, _value, identifier_to_var_index);
-		              fprintf(cg->fptr, ")");
-		              args_left--;
-		              if (args_left > 0) fprintf(cg->fptr, ", "););
+		list_for_each(
+			expr->v.application.expr_args, struct expr *, (void)_value; code_gen_expr(
+				cg, _value, identifier_to_var_index, region_var_to_var_index);
+			fprintf(cg->fptr, ")");
+			args_left--;
+			if (args_left > 0) fprintf(cg->fptr, ", "););
 		fprintf(cg->fptr, ")");
 		break;
 	}
-	case EXPR_LIT_INT:
-		fprintf(cg->fptr, "lit_thunk((void*)%d)", expr->v.lit_int);
+	case EXPR_LIT_INT: {
+		if (region_var_to_var_index != NULL) {
+			size_t region_var_index =
+				(size_t)map_get_str(region_var_to_var_index, expr->type->region_var);
+			fprintf(cg->fptr,
+			        "lit_thunk((void*)%d, v_%ld)",
+			        expr->v.lit_int,
+			        region_var_index);
+		} else {
+			fprintf(cg->fptr, "lit_thunk((void*)%d, NULL)", expr->v.lit_int);
+		}
 		break;
+	}
 	case EXPR_LIT_DOUBLE:
 		fprintf(cg->fptr, "lit_thunk((void*)%f)", expr->v.lit_double);
 		break;
@@ -385,45 +406,113 @@ static void code_gen_expr(struct code_generator *cg,
 		fprintf(cg->fptr, "lit_thunk((void*)%d)", expr->v.lit_bool);
 		break;
 	case EXPR_GROUPING:
-		code_gen_expr(cg, expr->v.grouping, identifier_to_var_index);
+		code_gen_expr(
+			cg, expr->v.grouping, identifier_to_var_index, region_var_to_var_index);
 		break;
 	case EXPR_LIST_NULL: break; /* TODO */
 	}
 }
 
+// static void _code_gen_region_var_index_assignments(
+// 	struct code_generator *cg,
+// 	struct region_sort *region_sort,
+// 	size_t arg_index,
+// 	size_t *next_var_index,
+// 	struct map *region_var_to_var_index,
+// 	struct list *region_tree_indicies /* list of size_t */
+// ) {
+//
+// 	if (region_sort->name != NULL) {
+// 		size_t var_index = *next_var_index;
+// 		*next_var_index += 1;
+// 		fprintf(cg->fptr,
+// 		        "\tstruct region_tree *v_%ld = args[%ld]->region_tree",
+// 		        var_index,
+// 		        arg_index);
+// 		list_for_each_reverse(region_tree_indicies,
+// 		                      size_t,
+// 		                      fprintf(cg->fptr, "->v.tuple[%ld]", _value));
+// 		fprintf(cg->fptr, ";\n");
+// 		map_put_str(region_var_to_var_index, region_sort->name, (void
+// *)var_index);
+// 	}
+//
+// 	if (region_sort->region_sort_params != NULL) {
+// 		size_t index = 0;
+// 		list_for_each(
+// 			region_sort->region_sort_params,
+// 			struct region_sort *,
+// 			list_prepend(region_tree_indicies, (void *)index++);
+// 			_code_gen_region_var_index_assignments(cg,
+// 		                                         _value,
+// 		                                         arg_index,
+// 		                                         next_var_index,
+// 		                                         region_var_to_var_index,
+// 		                                         region_tree_indicies);
+// 			list_pop_head(region_tree_indicies););
+// 	}
+// }
+//
+// static void
+// code_gen_region_var_index_assignments(struct code_generator *cg,
+//                                       char *region_sort,
+//                                       size_t arg_index,
+//                                       size_t *next_var_index,
+//                                       struct map *region_var_to_var_index) {
+// 	struct list *region_tree_indicies = list_new(NULL);
+// 	_code_gen_region_var_index_assignments(cg,
+// 	                                       region_sort,
+// 	                                       arg_index,
+// 	                                       next_var_index,
+// 	                                       region_var_to_var_index,
+// 	                                       region_tree_indicies);
+// 	list_free(region_tree_indicies);
+// }
+
 static void code_gen_function(struct code_generator *cg, struct list *cases) {
 	size_t i;
 	struct map *identifier_to_var_index;
+	struct map *region_var_to_var_index = map_new();
 	char *fn_name = ((struct def_value *)list_head(cases))->name;
 	size_t arity =
 		list_length(((struct def_value *)list_head(cases))->expr_params);
 	size_t next_var_index = 0;
 	size_t case_index     = 0;
 
+	struct def_value *head_def = list_head(cases);
+
 	assert(arity > 0);
 
 	fprintf(cg->fptr, "void* fn_%s(struct thunk **args) {\n", fn_name);
 
 	/* setup variables for each arg */
-	for (i = 0; i < arity; i++) {
-		fprintf(
-			cg->fptr, "\tstruct thunk *v_%ld = args[%ld];\n", next_var_index++, i);
-	}
+	// for (i = 0; i < arity; i++) {
+	// 	fprintf(
+	// 		cg->fptr, "\tstruct thunk *v_%ld = args[%ld];\n", next_var_index++, i);
+	// 	code_gen_region_var_index_assignments(
+	// 		cg,
+	// 		((struct expr *)list_get(head_def->expr_params, i))->type->region_var,
+	// 		i,
+	// 		&next_var_index,
+	// 		region_var_to_var_index);
+	// }
 
 	/* generate each case */
-	list_for_each(cases, struct def_value *, identifier_to_var_index = map_new();
-	              fprintf(cg->fptr, "case_%ld : {\n", case_index++);
-	              code_gen_pattern_check_case(cg,
-	                                          _value->expr_params,
-	                                          identifier_to_var_index,
-	                                          &next_var_index,
-	                                          case_index);
-	              /* TODO assign in thunk and return */
-	              fprintf(cg->fptr, "\treturn thunk_eval(");
-	              code_gen_expr(cg, _value->value, identifier_to_var_index);
-	              fprintf(cg->fptr, ", void*);\n");
-	              fprintf(cg->fptr, "}\n");
-	              map_free(identifier_to_var_index));
+	list_for_each(
+		cases, struct def_value *, identifier_to_var_index = map_new();
+		fprintf(cg->fptr, "case_%ld : {\n", case_index++);
+		code_gen_pattern_check_case(cg,
+	                              _value->expr_params,
+	                              identifier_to_var_index,
+	                              &next_var_index,
+	                              case_index);
+		/* TODO assign in thunk and return */
+		fprintf(cg->fptr, "\treturn thunk_eval(");
+		code_gen_expr(
+			cg, _value->value, identifier_to_var_index, region_var_to_var_index);
+		fprintf(cg->fptr, ", void*);\n");
+		fprintf(cg->fptr, "}\n");
+		map_free(identifier_to_var_index));
 
 	fprintf(cg->fptr, "case_%ld : {\n", case_index);
 	fprintf(cg->fptr, "\tprintf(\"Unmatched pattern in function '");
@@ -457,16 +546,12 @@ static void code_gen_functions(struct code_generator *cg) {
 }
 
 static void code_gen_main(struct code_generator *cg) {
-	/* TODO assign all global values */
-	/* TODO call closure_main */
 	fprintf(cg->fptr, "int main(void) {\n");
-
 	map_for_each(cg->global_values,
 	             struct def_value *,
 	             fprintf(cg->fptr, "\tval_%s = ", _value->name);
-	             code_gen_expr(cg, _value->value, NULL);
+	             code_gen_expr(cg, _value->value, NULL, NULL);
 	             fprintf(cg->fptr, ";\n"););
-
 	fprintf(cg->fptr, "\tint ret_val = thunk_eval(val_main, int);\n");
 	fprintf(cg->fptr, "\tprintf(\"%%d\\n\", ret_val);\n");
 	fprintf(cg->fptr, "\treturn 0;\n");

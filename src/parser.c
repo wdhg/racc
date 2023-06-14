@@ -441,28 +441,6 @@ struct expr *parse_expr(struct parser *p) {
 
 static struct type *parse_type_free(struct parser *p);
 
-static struct region_sort *parse_type_region_sort(struct parser *p) {
-	struct region_sort *sort =
-		arena_push_struct_zero(p->arena, struct region_sort);
-
-	if (peek_type(p) == TOK_IDENTIFIER) {
-		PARSE_IDENTIFIER(sort->name, "Expected region variable");
-		if (!match(p, TOK_AT)) {
-			return sort;
-		}
-	}
-
-	sort->region_sort_params = list_new(p->arena);
-	CONSUME(TOK_PAREN_L, "Expected opening '(' for region sort");
-	do {
-		struct region_sort *param = parse_type_region_sort(p);
-		list_append(sort->region_sort_params, param);
-	} while (match(p, TOK_COMMA));
-	CONSUME(TOK_PAREN_R, "Expected closing ')' for region sort");
-
-	return sort;
-}
-
 static int is_type_primary(enum token_type type) {
 	switch (type) {
 	case TOK_IDENTIFIER:
@@ -569,7 +547,7 @@ static struct type *parse_type_parameterized(struct parser *p) {
 static struct type *parse_type_annotated(struct parser *p) {
 	struct type *type = parse_type_parameterized(p);
 	if (type != NULL && match(p, TOK_TICK)) {
-		type->region_sort = parse_type_region_sort(p);
+		PARSE_IDENTIFIER(type->region_var, "Expected region variable");
 	}
 	return type;
 }
@@ -732,17 +710,10 @@ static struct dec_constructor *parse_dec_constructor(struct parser *p) {
 
 	PARSE_IDENTIFIER(constructor->name, "Expected constructor");
 
-	if (match(p, TOK_TICK)) {
-		PARSE_IDENTIFIER(constructor->region_var, "Expected region variable");
-	}
-
 	while (is_type_primary(peek_type(p))) {
 		struct type *type_arg = parse_type_primary(p);
 		if (type_arg == NULL) {
 			return constructor;
-		}
-		if (match(p, TOK_TICK)) {
-			type_arg->region_sort = parse_type_region_sort(p);
 		}
 		list_append(constructor->type_params, type_arg);
 	}
@@ -756,9 +727,7 @@ static struct dec_data *parse_dec_data(struct parser *p) {
 	CONSUME(TOK_DATA, "Expected 'data' keyword");
 	dec_data = arena_push_struct_zero(p->arena, struct dec_data);
 	PARSE_IDENTIFIER(dec_data->name, "Expected data type name");
-	if (match(p, TOK_TICK)) {
-		dec_data->region_sort = parse_type_region_sort(p);
-	}
+
 	dec_data->type_vars        = list_new(p->arena);
 	dec_data->dec_constructors = list_new(p->arena);
 
