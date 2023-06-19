@@ -6,8 +6,7 @@
 #include <ctest.h>
 #include <string.h>
 
-#define EXPECT_TYPE_NODE_EQUALS(                                               \
-	type, expected_name, expected_args_len, expected_region_var)                 \
+#define EXPECT_TYPE_NODE_EQUALS(type, expected_name, expected_args_len)        \
 	{                                                                            \
 		EXPECT(type != NULL);                                                      \
 		EXPECT(strcmp(type->name, expected_name) == 0);                            \
@@ -17,18 +16,12 @@
 			EXPECT(type->type_args != NULL);                                         \
 			EXPECT(list_length(type->type_args) == expected_args_len);               \
 		}                                                                          \
-		if (expected_region_var != NULL) {                                         \
-			EXPECT(type->region_var != NULL);                                        \
-			EXPECT(strcmp(type->region_var, expected_region_var) == 0);              \
-		}                                                                          \
 	}
 
-#define EXPECT_TYPE_NODE_EQUALS_DFS(                                           \
-	queue, expected_name, expected_params_len, expected_region_var)              \
+#define EXPECT_TYPE_NODE_EQUALS_DFS(queue, expected_name, expected_params_len) \
 	{                                                                            \
 		struct type *type = list_pop_head(queue);                                  \
-		EXPECT_TYPE_NODE_EQUALS(                                                   \
-			type, expected_name, expected_params_len, expected_region_var);          \
+		EXPECT_TYPE_NODE_EQUALS(type, expected_name, expected_params_len);         \
 		if (type->type_args != NULL) {                                             \
 			list_prepend_all(queue, type->type_args);                                \
 		}                                                                          \
@@ -380,7 +373,7 @@ test parse_expr_parses_complex_data_structures(void) {
 test parse_type_parses_basic_concrete_types(void) {
 	struct parser p   = test_parser("String");
 	struct type *type = parse_type(&p);
-	EXPECT_TYPE_NODE_EQUALS(type, "String", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS(type, "String", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -390,8 +383,8 @@ test parse_type_parses_parameterized_concrete_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Maybe", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Maybe", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -401,9 +394,9 @@ test parse_type_parses_basic_function_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "String", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "String", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -413,10 +406,10 @@ test parse_type_parses_parameterized_function_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Maybe", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Maybe", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -426,11 +419,11 @@ test parse_type_parses_multiple_argument_function_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -440,13 +433,13 @@ test parse_type_parses_grouped_function_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -456,15 +449,15 @@ test parse_type_parses_list_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -474,14 +467,14 @@ test parse_type_parses_tuple_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,,)", 3, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,,)", 3);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -492,19 +485,19 @@ test parse_type_parses_complex_types(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Either", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Either", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Either", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Either", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Either", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Either", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -515,26 +508,26 @@ test parse_type_parses_complex_types_2(void) {
 	struct type *type       = parse_type(&p);
 	struct list *type_queue = list_new(p.arena);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Char", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Bool", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Char", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Char", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Char", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Bool", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Char", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "[]", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Char", 0);
 	PASS();
 }
 
@@ -546,41 +539,25 @@ test parse_type_parses_type_contexts(void) {
 	EXPECT(type->type_constraints != NULL);
 	EXPECT(list_length(type->type_constraints) == 2);
 	list_prepend_all(type_queue, type->type_constraints);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Eq", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Functor", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Eq", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Functor", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 0);
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Bool", 0, NULL);
-	arena_free(p.arena);
-	PASS();
-}
-
-test parse_type_parses_region_sorts(void) {
-	struct parser p         = test_parser("(a, b) 'r -> a 'r");
-	struct type *type       = parse_type(&p);
-	struct list *type_queue = list_new(p.arena);
-	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "(,)", 2, "r");
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, "r");
-	EXPECT(list_length(type_queue) == 0);
-	list_prepend(type_queue, type);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Bool", 0);
 	arena_free(p.arena);
 	PASS();
 }
 
 test parse_stmt_parses_basic_class_declarations(void) {
 	struct parser p =
-		test_parser("class Functor a {\n  fmap :: (a -> b) -> f a -> f b;\n} ");
+		test_parser("class Functor a {\n  fmap :: (a -> b) -> f a -> f b 'r;\n} ");
 	struct stmt *stmt       = parse_stmt(&p);
 	struct list *type_queue = list_new(p.arena);
 	struct dec_type *dec_type;
@@ -592,23 +569,23 @@ test parse_stmt_parses_basic_class_declarations(void) {
 	dec_type = list_get(stmt->v.dec_class->dec_types, 0);
 	EXPECT(strcmp(dec_type->name, "fmap") == 0);
 	list_prepend(type_queue, dec_type->type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
 	arena_free(p.arena);
 	PASS();
 }
 
 test parse_stmt_parses_class_declarations(void) {
-	struct parser p =
-		test_parser("class Applicative a {\n  pure :: a -> f a;\n  liftA2 :: (a -> "
-	              "b -> c) -> f a -> f b -> f c;\n} ");
+	struct parser p = test_parser(
+		"class Applicative a {\n  pure :: a -> f a 'r;\n  liftA2 :: (a -> "
+		"b -> c) -> f a -> f b -> f c 'r;\n} ");
 	struct stmt *stmt       = parse_stmt(&p);
 	struct list *type_queue = list_new(p.arena);
 	struct dec_type *dec_type;
@@ -622,30 +599,30 @@ test parse_stmt_parses_class_declarations(void) {
 	dec_type = list_get(stmt->v.dec_class->dec_types, 0);
 	EXPECT(strcmp(dec_type->name, "pure") == 0);
 	list_prepend(type_queue, dec_type->type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
 	EXPECT(list_length(type_queue) == 0);
 
 	/* liftA2 */
 	dec_type = list_get(stmt->v.dec_class->dec_types, 1);
 	EXPECT(strcmp(dec_type->name, "liftA2") == 0);
 	list_prepend(type_queue, dec_type->type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "b", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "f", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "c", 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -676,9 +653,9 @@ test parse_stmt_parses_data_declarations(void) {
 	EXPECT(constructor->type_params != NULL);
 	EXPECT(list_length(constructor->type_params) == 2);
 	list_prepend_all(type_queue, constructor->type_params);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "List", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "List", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
 	EXPECT(list_length(type_queue) == 0);
 
 	arena_free(p.arena);
@@ -686,7 +663,7 @@ test parse_stmt_parses_data_declarations(void) {
 }
 
 test parse_stmt_parses_type_declaration(void) {
-	struct parser p         = test_parser("myFunc :: Int -> String;");
+	struct parser p         = test_parser("myFunc :: Int -> String 'r;");
 	struct stmt *stmt       = parse_stmt(&p);
 	struct list *type_queue = list_new(p.arena);
 	struct type *type;
@@ -696,9 +673,10 @@ test parse_stmt_parses_type_declaration(void) {
 	EXPECT(strcmp(stmt->v.dec_type->name, "myFunc") == 0);
 	type = stmt->v.dec_type->type;
 	list_prepend(type_queue, type);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "String", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "->", 2);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Int", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "String", 0);
+	EXPECT(strcmp(stmt->v.dec_type->region_var, "r") == 0);
 	arena_free(p.arena);
 	PASS();
 }
@@ -738,16 +716,16 @@ test parse_stmt_parses_instance_definitions(void) {
 	EXPECT(stmt->v.def_instance->type_constraints != NULL);
 	EXPECT(list_length(stmt->v.def_instance->type_constraints) == 1);
 	list_prepend_all(type_queue, stmt->v.def_instance->type_constraints);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Eq", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Eq", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
 	EXPECT(list_length(type_queue) == 0);
 
 	EXPECT(strcmp(stmt->v.def_instance->class_name, "Eq") == 0);
 
 	EXPECT(list_length(stmt->v.def_instance->type_args) == 1);
 	list_prepend_all(type_queue, stmt->v.def_instance->type_args);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Maybe", 1, NULL);
-	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0, NULL);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Maybe", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
 	EXPECT(list_length(type_queue) == 0);
 
 	EXPECT(list_length(stmt->v.def_instance->def_values) == 3);
@@ -830,7 +808,6 @@ void test_parser_h(void) {
 	TEST(parse_type_parses_complex_types);
 	TEST(parse_type_parses_complex_types_2);
 	TEST(parse_type_parses_type_contexts);
-	TEST(parse_type_parses_region_sorts);
 	TEST(parse_stmt_parses_basic_class_declarations);
 	TEST(parse_stmt_parses_class_declarations);
 	TEST(parse_stmt_parses_data_declarations);

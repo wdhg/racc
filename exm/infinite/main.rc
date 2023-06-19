@@ -1,0 +1,31 @@
+data Maybe a {
+  Nothing |
+  Just a
+}
+
+tail :: [Int] -> [Int] 'r;
+tail (x:xs) = xs;
+
+zipWith :: (Int -> Int -> Int) -> [Int] -> [Int] -> [Int] 'r;
+zipWith _ [] _          = [];
+zipWith _ _ []          = [];
+zipWith f (x:xs) (y:ys) = (f x y) : (zipWith f xs ys);
+
+fib :: [Int] 'r;
+fib = let f :: Int -> Int -> Int 'r;
+          f x y = x + y;
+       in 1 : 1 : zipWith f fib (tail fib);
+
+ones :: [Int] 'r;
+ones = 1 : ones;
+
+sum :: [Int] -> Int 'r;
+sum [] = 0;
+sum (x:xs) = x + sum xs;
+
+take :: Int -> [Int] -> [Int] 'r;
+take 0 _ = [];
+take n (x:xs) = x : take (n - 1) xs;
+
+main :: Int 'r;
+main = sum (take 30 fib);

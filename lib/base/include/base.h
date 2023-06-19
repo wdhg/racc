@@ -6,32 +6,18 @@
 
 /* ========== REGIONS ========== */
 
-enum region_type { REGION_FINITE, REGION_INFINITE };
-
 struct region {
-	enum region_type type;
-
-	union {
-		struct {
-			void *bytes;
-		} finite;
-
-		struct {
-			struct arena *arena;
-			size_t reference_count;
-		} infinite;
-	} v;
+	struct arena *arena;
+	unsigned int reference_count;
 };
 
-struct region *region_new_finite(void *);
-struct region *region_new_infinite(void);
+struct region *region_new(void);
 void region_free(struct region *);
 void region_retain(struct region *);
 void region_release(struct region *);
 
-/* TODO implement finite region allocation */
-#define region_alloc(REGION, TYPE)                                             \
-	(arena_push_struct_zero(REGION->v.infinite.arena, TYPE))
+#define region_push_struct(REGION, TYPE)                                       \
+	(arena_push_struct_zero(REGION->arena, TYPE))
 
 /* ========== CLOSURES/THUNKS ========== */
 
@@ -40,8 +26,8 @@ struct thunk;
 struct closure {
 	size_t fn_arity;
 	size_t args_len;
-	void *(*fn)(struct thunk **, struct region *);
 	struct thunk **args;
+	void *(*fn)(struct thunk **, struct region *);
 };
 
 struct thunk {
@@ -72,23 +58,28 @@ void thunk_release(struct thunk *);
 
 /* ========== LANGUAGE DEFINED DATA TYPES ========== */
 
+/* lists */
 /* TODO rename to avoid potential collisions with user defined structures */
 
-enum base_List_type { DATA_List_Null, DATA_List_Cons };
+enum data_List_type { DATA_List_Null, DATA_List_Cons };
 
-struct base_List {
-	enum base_List_type type;
+struct data_List {
+	enum data_List_type type;
 
 	union {
 		struct {
-			void *value;
-			struct base_List *next;
+			struct thunk *param_0;
+			struct thunk *param_1;
 		} Cons;
 	} v;
 };
 
-struct base_List *data_List_Null(void);
-struct base_List *data_List_Cons(void);
+void *value_copy_List(void *, struct region *);
+
+struct thunk *val_Null;
+struct closure *closure_Cons;
+
+/* tuples */
 
 enum base_Tuple_type { DATA_Tuple_Tuple };
 

@@ -27,139 +27,139 @@
 #define TYPE_CHECK_TEST_REJECT(name, _source) TYPE_CHECK_TEST(name, _source, 1)
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_basic_type_declarations,
-                       "myFunc :: Int -> Bool;")
+                       "myFunc :: Int -> Bool 'r;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_duplicated_type_declarations,
-                       "myFunc :: Int -> Bool;\n"
-                       "myFunc :: Int -> Bool;")
+                       "myFunc :: Int -> Bool 'r;\n"
+                       "myFunc :: Int -> Bool 'r;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_different_type_declarations,
-                       "myFunc :: Int -> Bool;\n"
-                       "myFunc :: Int -> Bool;")
+                       "myFunc :: Int -> Bool 'r;\n"
+                       "myFunc :: Int -> Bool 'r;")
 
 TYPE_CHECK_TEST_ACCEPT(
 	type_check_accepts_matching_type_declaration_and_definitions,
-	"myFunc :: Int -> Bool;\n"
+	"myFunc :: Int -> Bool 'r;\n"
 	"myFunc _ = True;")
 
 TYPE_CHECK_TEST_REJECT(
 	type_check_rejects_mismatching_type_declaration_and_definitions,
-	"myFunc :: Int -> Bool;\n"
+	"myFunc :: Int -> Bool 'r;\n"
 	"myFunc x = x;")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_multiple_valid_definitions,
-                       "myFunc :: Int -> Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
                        "myFunc 0 = 1;\n"
                        "myFunc x = x;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_multiple_invalid_definitions,
-                       "myFunc :: Int -> Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
                        "myFunc 0 = 1;\n"
                        "myFunc x = False;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_not_enough_parameters_in_function_def,
-                       "myFunc :: Int -> Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
                        "myFunc = 1;\n")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_too_many_parameters_in_function_def,
-                       "myFunc :: Int -> Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
                        "myFunc x y = 1;\n")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_unknown_identifiers_in_function_def,
-                       "myFunc :: Int -> Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
                        "myFunc x = y;\n")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_data_structures_in_declaration,
-                       "myFunc :: [Int] -> Int;\n")
+                       "myFunc :: [Int] -> Int 'r;\n")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_data_structures_in_definitions,
-                       "myFunc :: [Int] -> Int;\n"
+                       "myFunc :: [Int] -> Int 'r;\n"
                        "myFunc (x:_) = x;")
 
 TYPE_CHECK_TEST_ACCEPT(
 	type_check_accepts_valid_nested_data_structures_in_definitions,
-	"myFunc :: [(Int, Bool)] -> Int;\n"
+	"myFunc :: [(Int, Bool)] -> Int 'r;\n"
 	"myFunc ((x,_):_) = x;")
 
 TYPE_CHECK_TEST_REJECT(
 	type_check_rejects_invalid_nested_data_structures_in_definitions,
-	"myFunc :: [(Int, Bool)] -> Int;\n"
+	"myFunc :: [(Int, Bool)] -> Int 'r;\n"
 	"myFunc ((_,x):_) = x;")
 
 TYPE_CHECK_TEST_ACCEPT(
 	type_check_accepts_valid_complex_nested_data_structures_in_definitions,
-	"myFunc :: [([(Int,Char)], ((Int,Bool), [Char]))] -> (Int, [Char]);\n"
+	"myFunc :: [([(Int,Char)], ((Int,Bool), [Char]))] -> (Int, [Char]) 'r;\n"
 	"myFunc ((((x,_):_),(_,y)):_) = (x,y);")
 
 TYPE_CHECK_TEST_REJECT(
 	type_check_rejects_invalid_complex_nested_data_structures_in_definitions,
-	"myFunc :: [([(Int,Char)], ((Int,Bool), [Char]))] -> (Int, [Char]);\n"
+	"myFunc :: [([(Int,Char)], ((Int,Bool), [Char]))] -> (Int, [Char]) 'r;\n"
 	"myFunc ((((x,_):_),(_,y)):_) = (y,x);")
 
 TYPE_CHECK_TEST_ACCEPT(
 	type_check_accepts_valid_complex_nested_data_structures_in_definitions_2,
 	"myFunc :: [([(Int,Char)], ((Int,Bool), [Char]))] -> ((Int, Int), "
-	"[[Char]]);\n"
+	"[[Char]]) 'r;\n"
 	"myFunc ((((x,_):_),(_,y)):_) = ((x,x),[y]);")
 
 TYPE_CHECK_TEST_REJECT(
 	type_check_rejects_invalid_complex_nested_data_structures_in_definitions_2,
 	"myFunc :: [([(Int,Char)], ((Int,Bool), [Char]))] -> ((Int, Int), "
-	"[[Char]]);\n"
+	"[[Char]]) 'r;\n"
 	"myFunc ((((x,_):_),(_,y)):_) = (x,y);")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_generic_uses_of_equal,
-                       "myFunc :: Int -> Int -> Bool;\n"
+                       "myFunc :: Int -> Int -> Bool 'r;\n"
                        "myFunc x y = x == y;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_generic_uses_of_equal,
-                       "myFunc :: Int -> Char -> Bool;\n"
+                       "myFunc :: Int -> Char -> Bool 'r;\n"
                        "myFunc x y = x == y;")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_empty_list_patterns,
-                       "myFunc :: [Int] -> Int;\n"
+                       "myFunc :: [Int] -> Int 'r;\n"
                        "myFunc (x:_) = x;\n"
                        "myFunc [] = 0;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_empty_list_patterns,
-                       "myFunc :: Int -> Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
                        "myFunc x = x;\n"
                        "myFunc [] = 0;")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_use_of_string_type,
-                       "myFunc :: String -> Char;\n"
+                       "myFunc :: String -> Char 'r;\n"
                        "myFunc \"\" = ' ';\n"
                        "myFunc (x:_) = x;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_use_of_string_type,
-                       "myFunc :: String -> Int;\n"
+                       "myFunc :: String -> Int 'r;\n"
                        "myFunc (x:_) = x;")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_use_of_literal_strings,
-                       "myFunc :: String;\n"
+                       "myFunc :: String 'r;\n"
                        "myFunc = \"hello\";")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_use_of_literal_strings,
-                       "myFunc :: Int;\n"
+                       "myFunc :: Int 'r;\n"
                        "myFunc = \"hello\";")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_nested_generic_uses_of_equal,
-                       "myFunc :: Int -> Int -> Bool;\n"
+                       "myFunc :: Int -> Int -> Bool 'r;\n"
                        "myFunc x y = (x == y) == False;")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_nested_generic_uses_of_equal,
-                       "myFunc :: Int -> Int -> Bool;\n"
+                       "myFunc :: Int -> Int -> Bool 'r;\n"
                        "myFunc x y = (x == y) == 3;")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_basic_data_types,
                        "data YesNo { Yes | No }\n"
-                       "yes :: YesNo;\n"
+                       "yes :: YesNo 'r;\n"
                        "yes = Yes;")
 
 TYPE_CHECK_TEST_ACCEPT(
 	type_check_accepts_valid_basic_data_types_with_concrete_args,
 	"data ID { ID Int }\n"
-	"myID :: ID;\n"
+	"myID :: ID 'r;\n"
 	"myID = ID 3;")
 
 TYPE_CHECK_TEST_REJECT(
@@ -173,15 +173,15 @@ TYPE_CHECK_TEST_ACCEPT(
 TYPE_CHECK_TEST_ACCEPT(
 	type_check_accepts_valid_basic_data_types_with_multiple_generic_args,
 	"data Either a b { Left a | Right b }\n"
-	"myInt :: Either Int Char;\n"
+	"myInt :: Either Int Char 'r;\n"
 	"myInt = Left 3;\n"
-	"myChar :: Either Int Char;\n"
+	"myChar :: Either Int Char 'r;\n"
 	"myChar = Right 'a';\n")
 
 TYPE_CHECK_TEST_REJECT(
 	type_check_rejects_invalid_use_of_basic_data_types_with_multiple_generic_args,
 	"data Either a b { Left a | Right b }\n"
-	"myChar :: Either Int Char;\n"
+	"myChar :: Either Int Char 'r;\n"
 	"myChar = Left 'a';\n")
 
 TYPE_CHECK_TEST_REJECT(
@@ -189,21 +189,21 @@ TYPE_CHECK_TEST_REJECT(
 	"data Either a a { Left a | Right a }\n")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_basic_let_in_expressions,
-                       "myFunc :: Int -> Int;\n"
-                       "myFunc x = let y :: Int;\n"
+                       "myFunc :: Int -> Int 'r;\n"
+                       "myFunc x = let y :: Int 'r;\n"
                        "               y = x + 1;"
                        "           in y;\n")
 
 TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_shadowing_let_in_expressions,
-                       "y :: Char;\n"
-                       "myFunc :: Int -> Int;\n"
-                       "myFunc x = let y :: Int;\n"
+                       "y :: Char 'r;\n"
+                       "myFunc :: Int -> Int 'r;\n"
+                       "myFunc x = let y :: Int 'r;\n"
                        "               y = x + 1;"
                        "           in y;\n")
 
 TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_basic_let_in_expressions,
-                       "myFunc :: Int -> Int;\n"
-                       "myFunc x = let y :: Char;\n"
+                       "myFunc :: Int -> Int 'r;\n"
+                       "myFunc x = let y :: Char 'r;\n"
                        "               y = 'a';"
                        "           in y;\n")
 

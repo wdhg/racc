@@ -2,5 +2,5 @@
 -Wextra
 -pedantic
 -std=c99
--I../mod
--I../lib/arena/include
+-Iinclude
+-I../arena/include

@@ -5,36 +5,23 @@
 
 /* ========== REGIONS ========== */
 
-struct region *region_new_finite(void *bytes) {
-	struct region *region  = calloc(1, sizeof(struct region));
-	region->type           = REGION_FINITE;
-	region->v.finite.bytes = bytes;
-	return region;
-}
-
-struct region *region_new_infinite(void) {
-	struct region *region              = calloc(1, sizeof(struct region));
-	region->type                       = REGION_INFINITE;
-	region->v.infinite.arena           = arena_alloc();
-	region->v.infinite.reference_count = 0;
+struct region *region_new(void) {
+	struct region *region   = calloc(1, sizeof(struct region));
+	region->arena           = arena_alloc();
+	region->reference_count = 0;
 	return region;
 }
 
 void region_free(struct region *region) {
-	assert(region->type == REGION_INFINITE);
-	arena_free(region->v.infinite.arena);
-	free(region);
+	arena_free(region->arena);
+	region->arena = NULL;
 }
 
-void region_retain(struct region *region) {
-	assert(region->type == REGION_INFINITE);
-	region->v.infinite.reference_count++;
-}
+void region_retain(struct region *region) { region->reference_count++; }
 
 void region_release(struct region *region) {
-	assert(region->type == REGION_INFINITE);
-	region->v.infinite.reference_count--;
-	if (region->v.infinite.reference_count == 0) {
+	region->reference_count--;
+	if (region->reference_count == 0) {
 		region_free(region);
 	}
 }
@@ -54,7 +41,7 @@ static struct thunk *thunk_alloc(struct region *region) {
 	if (region == NULL) {
 		thunk = calloc(1, sizeof(struct thunk));
 	} else {
-		thunk = arena_push_struct_zero(region->v.infinite.arena, struct thunk);
+		thunk = arena_push_struct_zero(region->arena, struct thunk);
 	}
 	thunk->region = region;
 	region_retain(region);
@@ -64,7 +51,6 @@ static struct thunk *thunk_alloc(struct region *region) {
 struct thunk *thunk_closure(struct closure *closure,
                             struct region *region,
                             void *(value_copy)(void *, struct region *region)) {
-	/* TODO allocate thunk in arena */
 	struct thunk *thunk;
 	thunk             = thunk_alloc(region);
 	thunk->evaluated  = 0;
@@ -100,10 +86,8 @@ static struct closure *closure_copy(struct closure *closure) {
 
 struct thunk *thunk_apply(struct thunk *thunk_closure,
                           struct thunk *thunk_arg) {
-	/* TODO figure out how to avoid leaking partially applied functions */
 	struct thunk *result;
-	result = thunk_copy(thunk_closure, NULL);
-	thunk_retain(thunk_arg);
+	result = thunk_copy(thunk_closure, thunk_arg->region);
 	result->closure->args[result->closure->args_len] = thunk_arg;
 	result->closure->args_len++;
 	return result;
@@ -114,7 +98,7 @@ struct thunk *thunk_copy(struct thunk *thunk, struct region *region) {
 	if (region == NULL) {
 		result = calloc(1, sizeof(struct thunk));
 	} else {
-		result = arena_push_struct_zero(region->v.infinite.arena, struct thunk);
+		result = region_push_struct(region, struct thunk);
 	}
 	result->region     = region;
 	result->evaluated  = thunk->evaluated;
@@ -135,6 +119,47 @@ void thunk_release(struct thunk *thunk) { region_release(thunk->region); }
 /* ========== CONTROL FLOW ========== */
 
 /* ========== LANGUAGE DEFINED DATA TYPES ========== */
+
+void *value_copy_List(void *value, struct region *region) {
+	struct data_List *data = value;
+	struct data_List *copy = region_push_struct(region, struct data_List);
+	copy->type             = data->type;
+	if (data->type == DATA_List_Cons) {
+		copy->v.Cons.param_0 = thunk_copy(data->v.Cons.param_0, region);
+		copy->v.Cons.param_1 = thunk_copy(data->v.Cons.param_1, region);
+	}
+	return copy;
+}
+
+struct data_List _data_List_Null = {
+	.type = DATA_List_Null,
+};
+struct thunk _val_Null = {
+	.evaluated = 1,
+	.closure   = NULL,
+	.value     = &_data_List_Null,
+};
+struct thunk *val_Null = &_val_Null;
+
+void *fn_Cons(struct thunk **args, struct region *region) {
+	struct data_List *value;
+	if (region == NULL) {
+		value = calloc(1, sizeof(struct data_List));
+	} else {
+		value = region_push_struct(region, struct data_List);
+	}
+	value->type           = DATA_List_Cons;
+	value->v.Cons.param_0 = args[0];
+	value->v.Cons.param_1 = args[1];
+	return value;
+}
+struct closure _closure_Cons = {
+	.fn_arity = 2,
+	.args_len = 0,
+	.fn       = fn_Cons,
+	.args     = NULL,
+};
+struct closure *closure_Cons = &_closure_Cons;
 
 /* ========== LANGUAGE DEFINED FUNCTIONS ========== */
 

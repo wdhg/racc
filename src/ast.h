@@ -59,14 +59,14 @@ typedef uid scope_id;
 struct type {
 	char *name;
 	struct kind *kind;
-	struct list *type_args; /* list of struct type* */
-	char *region_var;
+	struct list *type_args;        /* list of struct type* */
 	struct list *type_constraints; /* UNUSED list of struct type* */
 };
 
 struct dec_type {
 	char *name;
 	struct type *type;
+	char *region_var;
 };
 
 struct dec_class {

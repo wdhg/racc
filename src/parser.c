@@ -544,16 +544,8 @@ static struct type *parse_type_parameterized(struct parser *p) {
 	return type;
 }
 
-static struct type *parse_type_annotated(struct parser *p) {
-	struct type *type = parse_type_parameterized(p);
-	if (type != NULL && match(p, TOK_TICK)) {
-		PARSE_IDENTIFIER(type->region_var, "Expected region variable");
-	}
-	return type;
-}
-
 static struct type *parse_type_arrow(struct parser *p) {
-	struct type *type = parse_type_annotated(p);
+	struct type *type = parse_type_parameterized(p);
 
 	while (match(p, TOK_ARROW)) {
 		struct type *lhs = type;
@@ -626,6 +618,8 @@ static struct dec_type *parse_dec_type(struct parser *p) {
 	PARSE_IDENTIFIER(dec_type->name, "Expected declaration identifier");
 	CONSUME(TOK_COLON_COLON, "Expected '::' after identifier");
 	dec_type->type = parse_type(p);
+	CONSUME(TOK_TICK, "Missing ' after value type");
+	PARSE_IDENTIFIER(dec_type->region_var, "Expected region variable name");
 	CONSUME(TOK_SEMICOLON, "Expected ';' after type");
 	return dec_type;
 }
@@ -800,6 +794,7 @@ struct prog *parse_prog(struct parser *p) {
 	while (!match(p, TOK_EOF)) {
 		struct stmt *stmt = parse_stmt(p);
 		if (stmt == NULL) {
+			/* statement contains error, continue to next statement */
 			advance_to_next_statement(p);
 			continue;
 		}

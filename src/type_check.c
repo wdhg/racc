@@ -60,12 +60,10 @@ struct type type_int = {
 	&kind_star,
 	NULL,
 	NULL,
-	NULL,
 };
 struct type type_double = {
 	"Double",
 	&kind_star,
-	NULL,
 	NULL,
 	NULL,
 };
@@ -74,12 +72,10 @@ struct type type_char = {
 	&kind_star,
 	NULL,
 	NULL,
-	NULL,
 };
 struct type type_bool = {
 	"Bool",
 	&kind_star,
-	NULL,
 	NULL,
 	NULL,
 };
@@ -249,7 +245,6 @@ static struct type *new_type(struct type_checker *tc,
 	strcpy(type->name, type_identifier);
 	type->kind             = type_kind;
 	type->type_args        = NULL;
-	type->region_var       = NULL;
 	type->type_constraints = NULL;
 	return type;
 }
@@ -877,6 +872,8 @@ void type_check(struct prog *prog, struct arena *arena, struct error_log *log) {
 	set_value_type(tc, "(,)", TYPE_CONSTRUCTOR_TUPLE);
 	set_value_type(
 		tc, "+", APPLY_A_ARROW_B_ARROW_C(&type_int, &type_int, &type_int));
+	set_value_type(
+		tc, "-", APPLY_A_ARROW_B_ARROW_C(&type_int, &type_int, &type_int));
 
 	type_check_prog(tc, prog);
 

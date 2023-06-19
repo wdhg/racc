@@ -1,7 +1,6 @@
 #include "code_gen.h"
 #include "lexer.h"
 #include "parser.h"
-#include "region_check.h"
 #include "type_check.h"
 #include <arena.h>
 #include <stdio.h>
@@ -35,7 +34,6 @@ int main(int argc, char **argv) {
 	tokens = scan_tokens(source, arena, log);
 	prog   = parse(tokens, arena, log);
 	type_check(prog, arena, log);
-	check_regions(prog, arena, log);
 	code_gen(prog, arena, log, argv[2]);
 	printf("Done :)\n");
 	return 0;
