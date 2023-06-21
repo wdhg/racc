@@ -1,0 +1,23 @@
+data Maybe a {
+  Nothing |
+  Just a
+}
+
+maybeInt :: Maybe Int 'r;
+maybeInt = let y :: Int 'r;
+               y = 4;
+            in Just y;
+
+inc :: Int -> Int 'r;
+inc x = x + 1;
+
+fromJust :: Maybe Int -> Int 'r;
+fromJust (Just x) = x;
+fromJust Nothing = 0;
+
+main :: Int 'r;
+main = let x :: Maybe Int 'r;
+           x = Just 4;
+           y :: Maybe Int 'r;
+           y = Just 9;
+        in (fromJust x) + (fromJust y);
