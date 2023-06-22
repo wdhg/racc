@@ -40,6 +40,24 @@ OBJECTS_LIBS_DEBUG += $(DIR_LIB)/ctest/obj/debug/ctest.o
 
 .PHONY: main
 main: $(EXE_MAIN)
+	@echo ""
+	@echo "     ▄▀▀▀▀█▄                                "
+	@echo "    █     ▐███                     ▄▄█▀▀▀▀▄ "
+	@echo "    ▌      ▀██▀                   ▀▀       ▌"
+	@echo "    ▐                                      █"
+	@echo "     ▀                                    ▐█"
+	@echo "                 ▄▄█ █▄                  ▄█▌"
+	@echo "        ▄▄█████████  ██▄▄▄███▄           █▀ "
+	@echo "    ▄█████████████  ▐████████████           "
+	@echo " ▄███████▀██▀▀ ▐█▀  ███ ▐█████████▄         "
+	@echo "▀▀▀▀▀           ▀   ▀     ▀▀▀▀▀███████▄     "
+	@echo "                █  ▄            ▀▀▀▀█████▄  "
+	@echo "             ███████▄▄                      "
+	@echo "           ▄██████████▄                     "
+	@echo "   RACC    █▀▄▄  ███████▌                   "
+	@echo " COMPILED         ████████▄                 "
+	@echo "            ▄▄  ▄█████▀▀▀                   "
+	@echo "               ▀▀                           "
 
 .PHONY: debug
 debug: $(EXE_DEBUG)
