@@ -32,9 +32,17 @@ int main(int argc, char **argv) {
 	log->source = source;
 
 	tokens = scan_tokens(source, arena, log);
-	prog   = parse(tokens, arena, log);
+	if (log->had_error)
+		return 1;
+	prog = parse(tokens, arena, log);
+	if (log->had_error)
+		return 1;
 	type_check(prog, arena, log);
+	if (log->had_error)
+		return 1;
 	code_gen(prog, arena, log, argv[2]);
+	if (log->had_error)
+		return 1;
 	printf("Done :)\n");
 	return 0;
 }
