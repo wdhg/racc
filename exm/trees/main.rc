@@ -1,0 +1,20 @@
+data Tree a {
+  Node a (Tree a) (Tree a) |
+  Leaf
+}
+
+treeSize :: Tree Int -> Int 'r;
+treeSize Leaf             = 0;
+treeSize (Node _ lhs rhs) = 1 + treeSize lhs + treeSize rhs;
+
+myTree :: Tree Int 'rMyTree;
+myTree = let lhs :: Tree Int 'rMyTree;
+             lhs = Node 2 Leaf Leaf;
+
+             rhs :: Tree Int 'rMyTree;
+             rhs = Node 4 Leaf Leaf;
+
+          in Node 1 lhs rhs;
+
+main :: Int 'r;
+main = treeSize myTree;
