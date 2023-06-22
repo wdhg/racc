@@ -1,7 +1,7 @@
 LIB_DIR = ../../lib
 
-RACC_MAIN  = ../../bin/racc_debug
-RACC_DEBUG = ../../bin/racc
+RACC_MAIN  = ../../bin/racc
+RACC_DEBUG = ../../bin/racc_debug
 
 OBJECTS_MAIN  = $(LIB_DIR)/base/obj/lib/base.o
 OBJECTS_MAIN += $(LIB_DIR)/arena/obj/lib/arena.o
@@ -26,7 +26,7 @@ debug: out/main.c | out
 clean:
 	rm -rf out
 
-out/main.c: | out
+out/main.c: main.rc | out
 	$(RACC_MAIN) main.rc out/main.c
 
 out:
