@@ -15,13 +15,13 @@ C_FLAGS += -I$(LIB_DIR)/arena/include
 
 
 .PHONY: all
-all: out/main.c
+all:
 	mkdir -p out
 	$(RACC_MAIN) main.rc out/main.c
 	$(CC) -o out/main out/main.c $(OBJECTS_MAIN) $(C_FLAGS)
 
 .PHONY: debug
-debug: out/main.c | out
+debug:
 	mkdir -p out
 	$(RACC_DEBUG) main.rc out/debug.c
 	$(CC) -o out/debug out/debug.c $(OBJECTS_DEBUG) $(C_FLAGS) -g
