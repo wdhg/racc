@@ -98,6 +98,9 @@ struct thunk *thunk_copy(struct thunk *thunk, struct region *region) {
 	if (region == NULL) {
 		result = calloc(1, sizeof(struct thunk));
 	} else {
+		if (region->arena == NULL) {
+			region->arena = arena_alloc();
+		}
 		result = region_push_struct(region, struct thunk);
 	}
 	result->region     = region;
@@ -122,8 +125,12 @@ void thunk_release(struct thunk *thunk) { region_release(thunk->region); }
 
 void *value_copy_List(void *value, struct region *region) {
 	struct data_List *data = value;
-	struct data_List *copy = region_push_struct(region, struct data_List);
-	copy->type             = data->type;
+	struct data_List *copy;
+	if (region->arena == NULL) {
+		region->arena = arena_alloc();
+	}
+	copy       = region_push_struct(region, struct data_List);
+	copy->type = data->type;
 	if (data->type == DATA_List_Cons) {
 		copy->v.Cons.param_0 = thunk_copy(data->v.Cons.param_0, region);
 		copy->v.Cons.param_1 = thunk_copy(data->v.Cons.param_1, region);
@@ -146,6 +153,9 @@ void *fn_Cons(struct thunk **args, struct region *region) {
 	if (region == NULL) {
 		value = calloc(1, sizeof(struct data_List));
 	} else {
+		if (region->arena == NULL) {
+			region->arena = arena_alloc();
+		}
 		value = region_push_struct(region, struct data_List);
 	}
 	value->type           = DATA_List_Cons;
