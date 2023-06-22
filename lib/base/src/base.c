@@ -119,8 +119,6 @@ void thunk_retain(struct thunk *thunk) { region_retain(thunk->region); }
 
 void thunk_release(struct thunk *thunk) { region_release(thunk->region); }
 
-/* ========== CONTROL FLOW ========== */
-
 /* ========== LANGUAGE DEFINED DATA TYPES ========== */
 
 void *value_copy_List(void *value, struct region *region) {
@@ -172,6 +170,21 @@ struct closure _closure_Cons = {
 struct closure *closure_Cons = &_closure_Cons;
 
 /* ========== LANGUAGE DEFINED FUNCTIONS ========== */
+
+void *value_copy_Int(void *value, struct region *region) {
+	(void)region;
+	return (int)value;
+}
+
+void *value_copy_Char(void *value, struct region *region) {
+	(void)region;
+	return (char)value;
+}
+
+void *value_copy_Bool(void *value, struct region *region) {
+	(void)region;
+	return (char)value;
+}
 
 void *fn_add(struct thunk **args, struct region *region) {
 	(void)region; /* we don't need to allocate */

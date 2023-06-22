@@ -16,6 +16,8 @@ void region_free(struct region *);
 void region_retain(struct region *);
 void region_release(struct region *);
 
+struct region r_global;
+
 #define region_push_struct(REGION, TYPE)                                       \
 	(arena_push_struct_zero(REGION->arena, TYPE))
 
@@ -53,8 +55,6 @@ struct thunk *thunk_apply(struct thunk *, struct thunk *);
 struct thunk *thunk_copy(struct thunk *, struct region *);
 void thunk_retain(struct thunk *);
 void thunk_release(struct thunk *);
-
-/* ========== CONTROL FLOW ========== */
 
 /* ========== LANGUAGE DEFINED DATA TYPES ========== */
 
@@ -97,6 +97,10 @@ struct base_Tuple {
 struct base_Tuple *data_Tuple_Tuple(void);
 
 /* ========== LANGUAGE DEFINED FUNCTIONS ========== */
+
+void *value_copy_Int(void *value, struct region *region);
+void *value_copy_Char(void *value, struct region *region);
+void *value_copy_Bool(void *value, struct region *region);
 
 /* arithmetic */
 void *fn_add(struct thunk **, struct region *);

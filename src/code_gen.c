@@ -110,6 +110,7 @@ code_gen_dec_constructor_func(struct code_generator *cg,
 		fprintf(cg->fptr, "};\n");
 
 		fprintf(cg->fptr, "struct thunk _val_%s = {\n", dec_constructor->name);
+		fprintf(cg->fptr, "\t.region    = &r_global,\n");
 		fprintf(cg->fptr, "\t.evaluated = 1,\n");
 		fprintf(cg->fptr, "\t.closure   = NULL,\n");
 		fprintf(cg->fptr,
@@ -314,12 +315,6 @@ static void code_gen_prog(struct code_generator *cg, struct prog *prog) {
 	fprintf(cg->fptr, "#include <stdio.h>\n");
 	fprintf(cg->fptr, "#include <stdlib.h>\n");
 	fprintf(cg->fptr, "\n");
-	fprintf(cg->fptr,
-	        "void *value_copy_Int(void *value, struct region *region) {\n");
-	fprintf(cg->fptr, "\t(void)region;\n");
-	fprintf(cg->fptr, "\treturn (int)value;\n");
-	fprintf(cg->fptr, "}\n");
-	fprintf(cg->fptr, "\n");
 	list_for_each(prog->stmts, struct stmt *, code_gen_stmt(cg, _value));
 }
 
@@ -520,21 +515,27 @@ static void code_gen_expr(struct code_generator *cg,
 	switch (expr->expr_type) {
 	case EXPR_IDENTIFIER: {
 		char *name = translate_identifier_name(expr->v.identifier);
-		if (param_vars == NULL || !set_has_str(param_vars, name)) {
-			rid region_id = (rid)map_get_str(cg->identifier_to_rid, name);
-			fprintf(cg->fptr, "\tif (val_%s == NULL) {\n", name);
-			fprintf(cg->fptr,
-			        "\t\tif (r_%ld.arena == NULL) r_%ld.arena = arena_alloc();\n",
-			        region_id,
-			        region_id);
-			fprintf(
-				cg->fptr,
-				"\t\tval_%s = thunk_closure(closure_%s, &r_%ld, value_copy_%s);\n",
-				name,
-				name,
-				region_id,
-				translate_type_name(get_return_type(expr->type)->name));
-			fprintf(cg->fptr, "\t}\n");
+		assert(name[0] != '_');
+		if (islower(name[0])) {
+			/* is variable */
+			if (param_vars == NULL || !set_has_str(param_vars, name)) {
+				rid region_id = (rid)map_get_str(cg->identifier_to_rid, name);
+				fprintf(cg->fptr, "\tif (val_%s == NULL) {\n", name);
+				fprintf(cg->fptr,
+				        "\t\tif (r_%ld.arena == NULL) r_%ld.arena = arena_alloc();\n",
+				        region_id,
+				        region_id);
+				fprintf(
+					cg->fptr,
+					"\t\tval_%s = thunk_closure(closure_%s, &r_%ld, value_copy_%s);\n",
+					name,
+					name,
+					region_id,
+					translate_type_name(get_return_type(expr->type)->name));
+				fprintf(cg->fptr, "\t}\n");
+			}
+		} else {
+			/* is data_structure */
 		}
 		fprintf(
 			cg->fptr, "\tstruct thunk *v_%ld = val_%s;\n", vid_next(vid_state), name);
@@ -693,11 +694,12 @@ static void code_gen_values(struct code_generator *cg) {
 
 static void code_gen_main(struct code_generator *cg) {
 	fprintf(cg->fptr, "int main(void) {\n");
-	fprintf(cg->fptr, "\tstruct region *r_main = region_new();\n");
+	fprintf(cg->fptr, "\tr_global.arena           = arena_alloc();\n");
+	fprintf(cg->fptr, "\tr_global.reference_count = 0;\n");
 	/* TODO use actual region for main */
 	fprintf(
 		cg->fptr,
-		"\tval_main = thunk_closure(closure_main, r_main, value_copy_Int);\n");
+		"\tval_main = thunk_closure(closure_main, &r_global, value_copy_Int);\n");
 	fprintf(cg->fptr, "\tint ret_val = thunk_eval(val_main, int);\n");
 	fprintf(cg->fptr, "\tprintf(\"%%d\\n\", ret_val);\n");
 	fprintf(cg->fptr, "\treturn 0;\n");
