@@ -355,7 +355,6 @@ static void code_gen_pattern_check_param(struct code_generator *cg,
 			size_t var_id          = vid_next(vid_state);
 			char *data_type_name   = translate_type_name(expr->type->name);
 			char *constructor_name = translate_identifier_name(expr->v.identifier);
-			printf("'%s'\n", constructor_name);
 			fprintf(cg->fptr,
 			        "\tstruct data_%s *v_%ld = thunk_eval(v_%ld, struct data_%s*);\n",
 			        data_type_name,
