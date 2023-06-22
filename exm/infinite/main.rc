@@ -11,12 +11,12 @@ zipWith _ [] _          = [];
 zipWith _ _ []          = [];
 zipWith f (x:xs) (y:ys) = (f x y) : (zipWith f xs ys);
 
-fib :: [Int] 'r;
+fib :: [Int] 'rFib;
 fib = let f :: Int -> Int -> Int 'r;
           f x y = x + y;
        in 1 : 1 : zipWith f fib (tail fib);
 
-ones :: [Int] 'r;
+ones :: [Int] 'rOnes;
 ones = 1 : ones;
 
 sum :: [Int] -> Int 'r;
