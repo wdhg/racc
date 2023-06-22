@@ -720,7 +720,7 @@ get_dec_constructor_type(struct type_checker *tc,
                          struct type *data_type) {
 	struct type *constructor_type = data_type;
 
-	list_for_each(
+	list_for_each_reverse(
 		dec_constructor->type_params,
 		struct type *,
 		int is_valid = type_is_valid(tc, _value);

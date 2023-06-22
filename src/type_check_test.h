@@ -207,6 +207,14 @@ TYPE_CHECK_TEST_REJECT(type_check_rejects_invalid_basic_let_in_expressions,
                        "               y = 'a';"
                        "           in y;\n")
 
+TYPE_CHECK_TEST_ACCEPT(type_check_accepts_valid_tree_data_types,
+                       " data Tree a {\n"
+                       "   Node a (Tree a) (Tree a) |\n"
+                       "   Leaf\n"
+                       " }\n"
+                       "myTree :: Tree Int 'r;\n"
+                       "myTree = Node 1 Leaf Leaf;\n")
+
 void test_type_check_h(void) {
 	TEST(type_check_accepts_basic_type_declarations);
 	TEST(type_check_rejects_duplicated_type_declarations);
@@ -250,4 +258,5 @@ void test_type_check_h(void) {
 	TEST(type_check_accepts_valid_basic_let_in_expressions);
 	TEST(type_check_rejects_invalid_basic_let_in_expressions);
 	TEST(type_check_accepts_valid_shadowing_let_in_expressions);
+	TEST(type_check_accepts_valid_tree_data_types);
 }

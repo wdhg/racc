@@ -774,6 +774,45 @@ test parse_stmt_parses_instance_definitions(void) {
 	PASS();
 }
 
+test parse_stmt_parses_generic_tree_data_dec(void) {
+	struct parser p         = test_parser("data Tree a {\n"
+	                                      "  Node a (Tree a) (Tree a) |\n"
+	                                      "  Leaf\n"
+	                                      "}");
+	struct stmt *stmt       = parse_stmt(&p);
+	struct list *type_queue = list_new(p.arena);
+	struct dec_constructor *constructor;
+	EXPECT(p.log->had_error == 0);
+	EXPECT(stmt != NULL);
+	EXPECT(stmt->type == STMT_DEC_DATA);
+	EXPECT(stmt->v.dec_data != NULL);
+
+	EXPECT(strcmp(stmt->v.dec_data->name, "Tree") == 0);
+
+	EXPECT(list_length(stmt->v.dec_data->type_vars) == 1);
+	EXPECT(strcmp(list_head(stmt->v.dec_data->type_vars), "a") == 0);
+
+	EXPECT(list_length(stmt->v.dec_data->dec_constructors) == 2);
+
+	constructor = list_get(stmt->v.dec_data->dec_constructors, 0);
+	EXPECT(strcmp(constructor->name, "Node") == 0);
+	EXPECT(list_length(constructor->type_params) == 3);
+	list_prepend_all(type_queue, constructor->type_params);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Tree", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "Tree", 1);
+	EXPECT_TYPE_NODE_EQUALS_DFS(type_queue, "a", 0);
+	EXPECT(list_length(type_queue) == 0);
+
+	constructor = list_get(stmt->v.dec_data->dec_constructors, 1);
+	EXPECT(strcmp(constructor->name, "Leaf") == 0);
+	EXPECT(list_length(constructor->type_params) == 0);
+
+	arena_free(p.arena);
+	PASS();
+}
+
 void test_parser_h(void) {
 	TEST(parse_expr_parses_identifiers);
 	TEST(parse_expr_parses_ints);
@@ -814,4 +853,5 @@ void test_parser_h(void) {
 	TEST(parse_stmt_parses_type_declaration);
 	TEST(parse_stmt_parses_basic_value_definitions);
 	TEST(parse_stmt_parses_instance_definitions);
+	TEST(parse_stmt_parses_generic_tree_data_dec);
 }
